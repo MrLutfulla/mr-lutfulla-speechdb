@@ -133,16 +133,19 @@ export function MetadataForm({
   const watchedValues = form.watch();
 
   useEffect(() => {
-    if (onValuesChange) {
-      const subscription = form.watch((values) => {
-        const result = formSchema.safeParse(values);
-        if (result.success) {
-          onValuesChange(result.data as FormValues);
-        }
-      });
-      return () => subscription.unsubscribe();
-    }
-  }, [form, onValuesChange]);
+    if (!onValuesChange) return;
+
+    const subscription = form.watch((values) => {
+      const result = formSchema.safeParse(values);
+      if (result.success) {
+        onValuesChange(result.data as FormValues);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onValuesChange]);
+
 
   useEffect(() => {
     form.reset({
@@ -437,3 +440,5 @@ export function MetadataForm({
     </Form>
   );
 }
+
+    
