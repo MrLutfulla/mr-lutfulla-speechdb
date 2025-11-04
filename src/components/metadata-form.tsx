@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Recording } from '@/lib/types';
+import { Recording, PersonalityTraits } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const emotions = [
   { id: 'neutral', label: 'Neutral' },
@@ -49,13 +50,7 @@ const texts = [
   { id: 'text3', label: 'Bugun osmon tiniq, shamol yo‘q.' },
 ];
 
-const ageRanges = [
-  '18-25',
-  '26-35',
-  '36-45',
-  '46-55',
-  '56+',
-];
+const ageRanges = ['18-25', '26-35', '36-45', '46-55', '56+'];
 
 const regions = [
   'Toshkent',
@@ -73,6 +68,14 @@ const regions = [
   'Qoraqalpog‘iston',
 ];
 
+const personalityTraits: { id: keyof PersonalityTraits; label: string }[] = [
+  { id: 'openness', label: 'Ochiqlik (Openness)' },
+  { id: 'conscientiousness', label: 'Vijdonlilik (Conscientiousness)' },
+  { id: 'extraversion', label: 'Ekstraversiya (Extraversion)' },
+  { id: 'agreeableness', label: 'Yoqimlilik (Agreeableness)' },
+  { id: 'neuroticism', label: 'Nevrotizm (Neuroticism)' },
+];
+
 const formSchema = z.object({
   speakerId: z.string().min(1, 'Speaker ID is required.'),
   gender: z.enum(['male', 'female'], { required_error: 'Jinsini tanlang' }),
@@ -81,6 +84,13 @@ const formSchema = z.object({
   emotion: z.string({ required_error: 'Emotsiyani tanlang' }),
   intensity: z.enum(['normal', 'strong']),
   textId: z.string({ required_error: 'Matnni tanlang' }),
+  personality: z.object({
+    openness: z.boolean().default(false),
+    conscientiousness: z.boolean().default(false),
+    extraversion: z.boolean().default(false),
+    agreeableness: z.boolean().default(false),
+    neuroticism: z.boolean().default(false),
+  }).optional(),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -93,7 +103,13 @@ interface MetadataFormProps {
   children?: React.ReactNode;
 }
 
-export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange, children }: MetadataFormProps) {
+export function MetadataForm({
+  recording,
+  onSave,
+  isNewRecording,
+  onValuesChange,
+  children,
+}: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -104,6 +120,13 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
       emotion: recording.emotion || 'neutral',
       intensity: recording.intensity || 'normal',
       textId: recording.textId || 'text1',
+      personality: recording.personality || {
+        openness: false,
+        conscientiousness: false,
+        extraversion: false,
+        agreeableness: false,
+        neuroticism: false,
+      },
     },
   });
 
@@ -123,16 +146,22 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
 
   useEffect(() => {
     form.reset({
-       speakerId: recording.speakerId || '',
-       gender: recording.gender,
-       age: recording.age,
-       region: recording.region,
-       emotion: recording.emotion || 'neutral',
-       intensity: recording.intensity || 'normal',
-       textId: recording.textId || 'text1',
+      speakerId: recording.speakerId || '',
+      gender: recording.gender,
+      age: recording.age,
+      region: recording.region,
+      emotion: recording.emotion || 'neutral',
+      intensity: recording.intensity || 'normal',
+      textId: recording.textId || 'text1',
+      personality: recording.personality || {
+        openness: false,
+        conscientiousness: false,
+        extraversion: false,
+        agreeableness: false,
+        neuroticism: false,
+      },
     });
-  }, [recording.speakerId, form, recording.gender, recording.age, recording.region, recording.emotion, recording.intensity, recording.textId]);
-
+  }, [recording, form]);
 
   function onSubmit(values: FormValues) {
     onSave({
@@ -141,7 +170,7 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
     });
   }
 
-  const selectedText = texts.find(t => t.id === watchedValues.textId)?.label;
+  const selectedText = texts.find((t) => t.id === watchedValues.textId)?.label;
 
   return (
     <Form {...form}>
@@ -182,9 +211,9 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
               )}
             />
             {selectedText && (
-               <div className="mt-4 p-4 border-l-4 border-primary bg-primary/10">
-                 <p className="font-mono text-lg">"{selectedText}"</p>
-               </div>
+              <div className="mt-4 p-4 border-l-4 border-primary bg-primary/10">
+                <p className="font-mono text-lg">"{selectedText}"</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -240,13 +269,17 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
                         <FormControl>
                           <RadioGroupItem value="normal" />
                         </FormControl>
-                        <FormLabel className="font-normal">Oddiy (Normal)</FormLabel>
+                        <FormLabel className="font-normal">
+                          Oddiy (Normal)
+                        </FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="strong" />
                         </FormControl>
-                        <FormLabel className="font-normal">Kuchli (Strong)</FormLabel>
+                        <FormLabel className="font-normal">
+                          Kuchli (Strong)
+                        </FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -269,20 +302,27 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
                 <FormItem>
                   <FormLabel>Ishtirokchi ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. UZ_01" {...field} disabled={isNewRecording} />
+                    <Input
+                      placeholder="e.g. UZ_01"
+                      {...field}
+                      disabled={isNewRecording}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <FormField
+              <FormField
                 control={form.control}
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Jinsi</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Jinsini tanlang..." />
@@ -303,34 +343,48 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Yoshi</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Yosh oralig'ini tanlang..." />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {ageRanges.map(age => <SelectItem key={age} value={age}>{age}</SelectItem>)}
+                        {ageRanges.map((age) => (
+                          <SelectItem key={age} value={age}>
+                            {age}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-               <FormField
+              <FormField
                 control={form.control}
                 name="region"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Hudud</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Hududni tanlang..." />
                         </Trigger>
                       </FormControl>
                       <SelectContent>
-                        {regions.map(region => <SelectItem key={region} value={region.toLowerCase()}>{region}</SelectItem>)}
+                        {regions.map((region) => (
+                          <SelectItem key={region} value={region.toLowerCase()}>
+                            {region}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -341,13 +395,44 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
           </CardContent>
         </Card>
         
+        <Card>
+            <CardHeader>
+                <CardTitle>Shaxsiyat xususiyatlari (Personality Traits)</CardTitle>
+                <CardDescription>
+                Ishtirokchiga tegishli deb hisoblagan xususiyatlarni belgilang.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {personalityTraits.map((item) => (
+                <FormField
+                    key={item.id}
+                    control={form.control}
+                    name={`personality.${item.id}`}
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                        <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                        />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                        <FormLabel>{item.label}</FormLabel>
+                        </div>
+                    </FormItem>
+                    )}
+                />
+                ))}
+            </CardContent>
+        </Card>
+
         {children}
 
-        {!isNewRecording &&
+        {!isNewRecording && (
           <Button type="submit" disabled={!form.formState.isDirty} size="lg">
             O'zgarishlarni saqlash
           </Button>
-        }
+        )}
       </form>
     </Form>
   );
