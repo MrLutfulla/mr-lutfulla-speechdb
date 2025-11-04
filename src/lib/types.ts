@@ -1,3 +1,13 @@
+'use client';
+
+export interface PersonalityTraits {
+  openness: boolean;
+  conscientiousness: boolean;
+  extraversion: boolean;
+  agreeableness: boolean;
+  neuroticism: boolean;
+}
+
 export interface Recording {
   id: string;
   audioUrl: string;
@@ -9,8 +19,7 @@ export interface Recording {
   gender: 'male' | 'female';
   age: string;
   region: string;
-  transcription?: string; // Optional field from before
-  labels?: string[]; // Optional field from before
+  personality?: PersonalityTraits;
 }
 
 export interface StoredRecording {
@@ -24,6 +33,5 @@ export interface StoredRecording {
   gender: 'male' | 'female';
   age: string;
   region: string;
-  transcription?: string;
-  labels?: string[];
+  personality?: PersonalityTraits;
 }

@@ -84,13 +84,15 @@ const formSchema = z.object({
   emotion: z.string({ required_error: 'Emotsiyani tanlang' }),
   intensity: z.enum(['normal', 'strong']),
   textId: z.string({ required_error: 'Matnni tanlang' }),
-  personality: z.object({
-    openness: z.boolean().default(false),
-    conscientiousness: z.boolean().default(false),
-    extraversion: z.boolean().default(false),
-    agreeableness: z.boolean().default(false),
-    neuroticism: z.boolean().default(false),
-  }).optional(),
+  personality: z
+    .object({
+      openness: z.boolean().default(false),
+      conscientiousness: z.boolean().default(false),
+      extraversion: z.boolean().default(false),
+      agreeableness: z.boolean().default(false),
+      neuroticism: z.boolean().default(false),
+    })
+    .optional(),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -137,7 +139,7 @@ export function MetadataForm({
       const subscription = form.watch((values) => {
         const result = formSchema.safeParse(values);
         if (result.success) {
-          onValuesChange(result.data);
+          onValuesChange(result.data as FormValues);
         }
       });
       return () => subscription.unsubscribe();
@@ -394,36 +396,36 @@ export function MetadataForm({
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-            <CardHeader>
-                <CardTitle>Shaxsiyat xususiyatlari (Personality Traits)</CardTitle>
-                <CardDescription>
-                Ishtirokchiga tegishli deb hisoblagan xususiyatlarni belgilang.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {personalityTraits.map((item) => (
-                <FormField
-                    key={item.id}
-                    control={form.control}
-                    name={`personality.${item.id}`}
-                    render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                        <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                        />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                        <FormLabel>{item.label}</FormLabel>
-                        </div>
-                    </FormItem>
-                    )}
-                />
-                ))}
-            </CardContent>
+          <CardHeader>
+            <CardTitle>Shaxsiyat xususiyatlari (Personality Traits)</CardTitle>
+            <CardDescription>
+              Ishtirokchiga tegishli deb hisoblagan xususiyatlarni belgilang.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {personalityTraits.map((item) => (
+              <FormField
+                key={item.id}
+                control={form.control}
+                name={`personality.${item.id}`}
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>{item.label}</FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            ))}
+          </CardContent>
         </Card>
 
         {children}
