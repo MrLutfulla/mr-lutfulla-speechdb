@@ -112,8 +112,9 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
   useEffect(() => {
     if (onValuesChange) {
       const subscription = form.watch((values) => {
-        if(form.formState.isValid) {
-          onValuesChange(values as FormValues);
+        const result = formSchema.safeParse(values);
+        if (result.success) {
+          onValuesChange(result.data);
         }
       });
       return () => subscription.unsubscribe();
@@ -130,7 +131,8 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
        intensity: recording.intensity || 'normal',
        textId: recording.textId || 'text1',
     });
-  }, [recording.speakerId, form]);
+  }, [recording.speakerId, form, recording.gender, recording.age, recording.region, recording.emotion, recording.intensity, recording.textId]);
+
 
   function onSubmit(values: FormValues) {
     onSave({
@@ -267,7 +269,7 @@ export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange
                 <FormItem>
                   <FormLabel>Ishtirokchi ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. UZ_01" {...field} />
+                    <Input placeholder="e.g. UZ_01" {...field} disabled={isNewRecording} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

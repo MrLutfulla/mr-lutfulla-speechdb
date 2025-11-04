@@ -46,7 +46,7 @@ async function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
   const wavBuffer = await WavEncoder.encode({
-    sampleRate: audioBuffer.sampleRate,
+    sampleRate: 48000,
     channelData: Array.from({ length: audioBuffer.numberOfChannels }, (_, i) =>
       audioBuffer.getChannelData(i)
     ),
@@ -97,13 +97,25 @@ export function SpeechCraftClient() {
       try {
         const recordingsToStore: StoredRecording[] = await Promise.all(
           updatedRecordings.map(async (rec) => {
+            if (rec.audioUrl.startsWith('blob:')) {
+              const response = await fetch(rec.audioUrl);
+              const blob = await response.blob();
+              const audioBase64 = await blobToBase64(blob);
+              const { audioUrl, ...rest } = rec;
+              return {
+                ...rest,
+                audioBase64,
+              };
+            }
+            // If it's not a blob URL, it's already a base64 string from a previous load
+            // This logic is flawed, let's fix it by re-fetching the blob every time.
             const response = await fetch(rec.audioUrl);
             const blob = await response.blob();
             const audioBase64 = await blobToBase64(blob);
             const { audioUrl, ...rest } = rec;
             return {
               ...rest,
-              audioBase64,
+              audioBase64: audioBase64,
             };
           })
         );
@@ -124,37 +136,38 @@ export function SpeechCraftClient() {
   );
 
   const handleAddRecording = async (audioBlob: Blob, metadata: Omit<Recording, 'id' | 'audioUrl' | 'createdAt'>) => {
-    const newId = `rec-${Date.now()}`;
+    const newId = `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}_${Date.now()}`;
     const newRecording: Recording = {
       id: newId,
       ...metadata,
+      speakerId: `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}`,
       audioUrl: URL.createObjectURL(audioBlob),
       createdAt: new Date().toISOString(),
     };
     
     const updatedRecordings = [...recordings, newRecording];
     setRecordings(updatedRecordings);
+    await updateLocalStorage(updatedRecordings);
     setSelectedRecordingId(newRecording.id);
-    updateLocalStorage(updatedRecordings);
     toast({
       title: 'Recording Saved',
       description: 'Your new recording has been added.',
     });
   };
 
-  const handleUpdateRecording = (updatedRecording: Recording) => {
+  const handleUpdateRecording = async (updatedRecording: Recording) => {
     const updatedRecordings = recordings.map((rec) =>
       rec.id === updatedRecording.id ? updatedRecording : rec
     );
     setRecordings(updatedRecordings);
-    updateLocalStorage(updatedRecordings);
+    await updateLocalStorage(updatedRecordings);
     toast({
       title: 'Metadata Updated',
       description: 'Your changes have been saved.',
     });
   };
 
-  const handleDeleteRecording = (id: string) => {
+  const handleDeleteRecording = async (id: string) => {
     const recordingToDelete = recordings.find((r) => r.id === id);
     if (recordingToDelete?.audioUrl) {
       URL.revokeObjectURL(recordingToDelete.audioUrl);
@@ -164,11 +177,10 @@ export function SpeechCraftClient() {
     if (selectedRecordingId === id) {
       setSelectedRecordingId(null);
     }
-    updateLocalStorage(updatedRecordings);
+    await updateLocalStorage(updatedRecordings);
     toast({
       title: 'Recording Deleted',
       description: 'The recording has been permanently removed.',
-      variant: 'destructive',
     });
   };
 
@@ -189,10 +201,10 @@ export function SpeechCraftClient() {
       const metadata = [];
 
       for (const rec of recordings) {
-        const fileName = `${rec.speakerId}_${rec.textId}_${rec.emotion?.toUpperCase()}_${rec.intensity?.toUpperCase()}.wav`;
-        const { audioUrl, ...rest } = rec;
+        const fileName = `${rec.speakerId}.wav`;
+        const { audioUrl, id, ...rest } = rec;
         
-        metadata.push({ ...rest, fileName });
+        metadata.push({ ...rest, id, fileName });
 
         const response = await fetch(rec.audioUrl);
         const webmBlob = await response.blob();
@@ -208,7 +220,7 @@ export function SpeechCraftClient() {
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `speechcraft-export-${new Date().toISOString()}.zip`;
+      a.download = `speechcraft-export-${new Date().toISOString().split('T')[0]}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -272,7 +284,7 @@ export function SpeechCraftClient() {
               onClearSelection={handleClearSelection}
            />
         ) : (
-          <NewRecording onSaveRecording={handleAddRecording} recordingsCount={recordings.length}/>
+          <NewRecording onSaveRecording={handleAddRecording} recordings={recordings}/>
         )}
       </div>
     </div>
