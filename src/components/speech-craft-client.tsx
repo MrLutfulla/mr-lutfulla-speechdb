@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Recording, StoredRecording } from '@/lib/types';
 import { RecordingList } from '@/components/recording-list';
 import { RecordingDetails } from '@/components/recording-details';
 import { Button } from '@/components/ui/button';
 import { Download, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { NewRecording } from '@/components/new-recording';
+import JSZip from 'jszip';
+import WavEncoder from 'wav-encoder';
 
 const LOCAL_STORAGE_KEY = 'speechcraft-recordings';
 
@@ -37,11 +40,25 @@ const base64ToBlob = (base64: string): Blob => {
   return new Blob([uInt8Array], { type: contentType });
 };
 
+async function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
+  const audioContext = new AudioContext({ sampleRate: 48000 });
+  const arrayBuffer = await webmBlob.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+  const wavBuffer = await WavEncoder.encode({
+    sampleRate: audioBuffer.sampleRate,
+    channelData: Array.from({ length: audioBuffer.numberOfChannels }, (_, i) =>
+      audioBuffer.getChannelData(i)
+    ),
+  });
+
+  return new Blob([wavBuffer], { type: 'audio/wav' });
+}
+
+
 export function SpeechCraftClient() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(
-    null
-  );
+  const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
@@ -106,19 +123,15 @@ export function SpeechCraftClient() {
     [toast]
   );
 
-  const handleAddRecording = async (audioBlob: Blob) => {
+  const handleAddRecording = async (audioBlob: Blob, metadata: Omit<Recording, 'id' | 'audioUrl' | 'createdAt'>) => {
     const newId = `rec-${Date.now()}`;
     const newRecording: Recording = {
       id: newId,
+      ...metadata,
       audioUrl: URL.createObjectURL(audioBlob),
-      speakerId: `UZ_${(recordings.length + 1).toString().padStart(2, '0')}`,
-      transcription: '',
       createdAt: new Date().toISOString(),
-      labels: [],
-      emotion: 'neutral',
-      intensity: 'normal',
-      textId: 'text1',
     };
+    
     const updatedRecordings = [...recordings, newRecording];
     setRecordings(updatedRecordings);
     setSelectedRecordingId(newRecording.id);
@@ -167,29 +180,43 @@ export function SpeechCraftClient() {
       });
       return;
     }
+    toast({
+      title: 'Exporting...',
+      description: 'Preparing your recordings. This may take a moment.',
+    });
     try {
-       const dataToExport = recordings.map(rec => {
-        const { audioUrl, ...rest } = rec;
+      const zip = new JSZip();
+      const metadata = [];
+
+      for (const rec of recordings) {
         const fileName = `${rec.speakerId}_${rec.textId}_${rec.emotion?.toUpperCase()}_${rec.intensity?.toUpperCase()}.wav`;
-        return {
-          ...rest,
-          fileName,
-        }
-      });
+        const { audioUrl, ...rest } = rec;
+        
+        metadata.push({ ...rest, fileName });
+
+        const response = await fetch(rec.audioUrl);
+        const webmBlob = await response.blob();
+        const wavBlob = await convertWebmToWav(webmBlob);
+        
+        zip.file(fileName, wavBlob);
+      }
       
-      const jsonString = JSON.stringify(dataToExport, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
+      const jsonString = JSON.stringify(metadata, null, 2);
+      zip.file('metadata.json', jsonString);
+      
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `speechcraft-export-${new Date().toISOString()}.json`;
+      a.download = `speechcraft-export-${new Date().toISOString()}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
       toast({
         title: 'Export Successful',
-        description: 'Your data has been exported as a JSON file.',
+        description: 'Your data has been exported as a ZIP file.',
       });
     } catch (error) {
       console.error('Failed to export data', error);
@@ -205,9 +232,9 @@ export function SpeechCraftClient() {
     setSelectedRecordingId(null);
   }
 
-  const selectedRecording = recordings.find(
+  const selectedRecording = useMemo(() => recordings.find(
     (rec) => rec.id === selectedRecordingId
-  );
+  ), [recordings, selectedRecordingId]);
 
   if (!isClient) {
     return <div className="w-full h-full bg-background" />;
@@ -236,14 +263,17 @@ export function SpeechCraftClient() {
         />
       </div>
       <div className="p-4 md:p-8 overflow-y-auto h-full">
-        <RecordingDetails
-          key={selectedRecording?.id ?? 'new'}
-          recording={selectedRecording}
-          onSaveRecording={handleAddRecording}
-          onUpdateRecording={handleUpdateRecording}
-          onDeleteRecording={handleDeleteRecording}
-          onClearSelection={handleClearSelection}
-        />
+        {selectedRecording ? (
+           <RecordingDetails
+              key={selectedRecording.id}
+              recording={selectedRecording}
+              onUpdateRecording={handleUpdateRecording}
+              onDeleteRecording={handleDeleteRecording}
+              onClearSelection={handleClearSelection}
+           />
+        ) : (
+          <NewRecording onSaveRecording={handleAddRecording} recordingsCount={recordings.length}/>
+        )}
       </div>
     </div>
   );

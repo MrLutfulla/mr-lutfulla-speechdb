@@ -1,7 +1,6 @@
 'use client';
 
 import { Recording } from '@/lib/types';
-import { AudioRecorder } from './audio-recorder';
 import { AudioPlayer } from './audio-player';
 import { MetadataForm } from './metadata-form';
 import { Button } from '@/components/ui/button';
@@ -19,8 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface RecordingDetailsProps {
-  recording: Recording | undefined;
-  onSaveRecording: (blob: Blob) => void;
+  recording: Recording;
   onUpdateRecording: (recording: Recording) => void;
   onDeleteRecording: (id: string) => void;
   onClearSelection: () => void;
@@ -28,22 +26,10 @@ interface RecordingDetailsProps {
 
 export function RecordingDetails({
   recording,
-  onSaveRecording,
   onUpdateRecording,
   onDeleteRecording,
   onClearSelection,
 }: RecordingDetailsProps) {
-  if (!recording) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center bg-card p-8 rounded-lg border-2 border-dashed border-muted">
-        <h2 className="text-2xl font-headline font-semibold mb-2">New Recording</h2>
-        <p className="text-muted-foreground mb-8 max-w-sm">
-          Click the button below to start recording new audio. Select a text and an emotion before you start.
-        </p>
-        <AudioRecorder onSave={onSaveRecording} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -91,7 +77,11 @@ export function RecordingDetails({
 
       <AudioPlayer audioUrl={recording.audioUrl} />
 
-      <MetadataForm recording={recording} onSave={onUpdateRecording} />
+      <MetadataForm 
+        recording={recording} 
+        onSave={onUpdateRecording}
+        isNewRecording={false}
+       />
     </div>
   );
 }

@@ -1,12 +1,12 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Recording } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -75,46 +75,71 @@ const regions = [
 
 const formSchema = z.object({
   speakerId: z.string().min(1, 'Speaker ID is required.'),
-  transcription: z.string().optional(),
-  gender: z.enum(['male', 'female']).optional(),
-  age: z.string().optional(),
-  region: z.string().optional(),
-  emotion: z.string().optional(),
-  intensity: z.enum(['normal', 'strong']).optional(),
-  textId: z.string().optional(),
+  gender: z.enum(['male', 'female'], { required_error: 'Jinsini tanlang' }),
+  age: z.string({ required_error: 'Yoshni tanlang' }),
+  region: z.string({ required_error: 'Hududni tanlang' }),
+  emotion: z.string({ required_error: 'Emotsiyani tanlang' }),
+  intensity: z.enum(['normal', 'strong']),
+  textId: z.string({ required_error: 'Matnni tanlang' }),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+export type FormValues = z.infer<typeof formSchema>;
 
 interface MetadataFormProps {
-  recording: Recording;
-  onSave: (recording: Recording) => void;
+  recording: Partial<Recording>;
+  onSave: (values: any) => void;
+  isNewRecording: boolean;
+  onValuesChange?: (values: FormValues) => void;
+  children?: React.ReactNode;
 }
 
-export function MetadataForm({ recording, onSave }: MetadataFormProps) {
+export function MetadataForm({ recording, onSave, isNewRecording, onValuesChange, children }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       speakerId: recording.speakerId || '',
-      transcription: recording.transcription || '',
       gender: recording.gender,
       age: recording.age,
       region: recording.region,
-      emotion: recording.emotion,
+      emotion: recording.emotion || 'neutral',
       intensity: recording.intensity || 'normal',
-      textId: recording.textId,
+      textId: recording.textId || 'text1',
     },
   });
+
+  const watchedValues = form.watch();
+
+  useEffect(() => {
+    if (onValuesChange) {
+      const subscription = form.watch((values) => {
+        if(form.formState.isValid) {
+          onValuesChange(values as FormValues);
+        }
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [form, onValuesChange]);
+
+  useEffect(() => {
+    form.reset({
+       speakerId: recording.speakerId || '',
+       gender: recording.gender,
+       age: recording.age,
+       region: recording.region,
+       emotion: recording.emotion || 'neutral',
+       intensity: recording.intensity || 'normal',
+       textId: recording.textId || 'text1',
+    });
+  }, [recording.speakerId, form]);
 
   function onSubmit(values: FormValues) {
     onSave({
       ...recording,
       ...values,
-      transcription: values.transcription ?? '',
     });
   }
 
-  const selectedText = texts.find(t => t.id === form.watch('textId'))?.label;
+  const selectedText = texts.find(t => t.id === watchedValues.textId)?.label;
 
   return (
     <Form {...form}>
@@ -280,7 +305,7 @@ export function MetadataForm({ recording, onSave }: MetadataFormProps) {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Yosh oralig'ini tanlang..." />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         {ageRanges.map(age => <SelectItem key={age} value={age}>{age}</SelectItem>)}
@@ -300,7 +325,7 @@ export function MetadataForm({ recording, onSave }: MetadataFormProps) {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Hududni tanlang..." />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         {regions.map(region => <SelectItem key={region} value={region.toLowerCase()}>{region}</SelectItem>)}
@@ -311,30 +336,16 @@ export function MetadataForm({ recording, onSave }: MetadataFormProps) {
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="transcription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Transkripsiya (Ixtiyoriy)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Yozib olingan matnni bu yerga kiriting..."
-                      {...field}
-                      rows={3}
-                      className="resize-y"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </CardContent>
         </Card>
+        
+        {children}
 
-        <Button type="submit" disabled={!form.formState.isDirty} size="lg">
-          O'zgarishlarni saqlash
-        </Button>
+        {!isNewRecording &&
+          <Button type="submit" disabled={!form.formState.isDirty} size="lg">
+            O'zgarishlarni saqlash
+          </Button>
+        }
       </form>
     </Form>
   );
