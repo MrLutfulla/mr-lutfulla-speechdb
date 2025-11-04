@@ -5,7 +5,7 @@ import { AudioRecorder } from './audio-recorder';
 import { AudioPlayer } from './audio-player';
 import { MetadataForm } from './metadata-form';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,7 @@ interface RecordingDetailsProps {
   onSaveRecording: (blob: Blob) => void;
   onUpdateRecording: (recording: Recording) => void;
   onDeleteRecording: (id: string) => void;
+  onClearSelection: () => void;
 }
 
 export function RecordingDetails({
@@ -30,6 +31,7 @@ export function RecordingDetails({
   onSaveRecording,
   onUpdateRecording,
   onDeleteRecording,
+  onClearSelection,
 }: RecordingDetailsProps) {
   if (!recording) {
     return (
@@ -54,31 +56,37 @@ export function RecordingDetails({
             Recorded on {new Date(recording.createdAt).toLocaleString()}
           </p>
         </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="icon">
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete Recording</span>
+        <div className="flex items-center gap-2">
+           <Button variant="ghost" size="icon" onClick={onClearSelection}>
+              <X className="h-5 w-5" />
+              <span className="sr-only">Go back</span>
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the
-                recording and its metadata from your browser storage.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => onDeleteRecording(recording.id)}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="icon">
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Delete Recording</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the
+                  recording and its metadata from your browser storage.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDeleteRecording(recording.id)}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       <AudioPlayer audioUrl={recording.audioUrl} />

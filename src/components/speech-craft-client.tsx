@@ -89,6 +89,7 @@ export function SpeechCraftClient() {
               transcription: rec.transcription,
               createdAt: rec.createdAt,
               audioBase64,
+              labels: rec.labels,
             };
           })
         );
@@ -115,6 +116,7 @@ export function SpeechCraftClient() {
       speakerId: `Speaker ${recordings.length + 1}`,
       transcription: '',
       createdAt: new Date().toISOString(),
+      labels: [],
     };
     const updatedRecordings = [...recordings, newRecording];
     setRecordings(updatedRecordings);
@@ -191,6 +193,10 @@ export function SpeechCraftClient() {
       });
     }
   };
+  
+  const handleClearSelection = () => {
+    setSelectedRecordingId(null);
+  }
 
   const selectedRecording = recordings.find(
     (rec) => rec.id === selectedRecordingId
@@ -223,6 +229,7 @@ export function SpeechCraftClient() {
           onSaveRecording={handleAddRecording}
           onUpdateRecording={handleUpdateRecording}
           onDeleteRecording={handleDeleteRecording}
+          onClearSelection={handleClearSelection}
         />
       </div>
     </div>

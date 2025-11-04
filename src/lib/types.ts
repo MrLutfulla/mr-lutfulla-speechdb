@@ -4,6 +4,7 @@ export interface Recording {
   speakerId: string;
   transcription: string;
   createdAt: string;
+  labels?: string[];
 }
 
 export interface StoredRecording {
@@ -12,4 +13,5 @@ export interface StoredRecording {
   transcription: string;
   createdAt: string;
   audioBase64: string;
+  labels?: string[];
 }
