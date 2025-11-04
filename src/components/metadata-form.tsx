@@ -350,7 +350,7 @@ export function MetadataForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Yosh oralig'ini tanlang..." />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {ageRanges.map((age) => (
@@ -377,7 +377,7 @@ export function MetadataForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Hududni tanlang..." />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {regions.map((region) => (
