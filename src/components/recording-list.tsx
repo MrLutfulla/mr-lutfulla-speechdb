@@ -45,7 +45,7 @@ export function RecordingList({
               )}
             >
               <div className="flex justify-between items-center">
-                <p className="font-medium truncate">{recording.speakerId}</p>
+                <p className="font-medium truncate">{recording.speakerId || 'No ID'}</p>
                 <time
                   className={cn(
                     'text-xs',
@@ -61,13 +61,13 @@ export function RecordingList({
               </div>
               <p
                 className={cn(
-                  'text-sm truncate mt-1',
+                  'text-sm truncate mt-1 capitalize',
                   selectedRecordingId === recording.id
                     ? 'text-accent-foreground/90'
                     : 'text-muted-foreground'
                 )}
               >
-                {recording.transcription || 'No transcription'}
+                {recording.emotion || 'No emotion'} - {recording.intensity || 'normal'}
               </p>
             </button>
           ))}

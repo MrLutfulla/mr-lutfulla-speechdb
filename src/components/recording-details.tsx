@@ -38,7 +38,7 @@ export function RecordingDetails({
       <div className="flex flex-col items-center justify-center h-full text-center bg-card p-8 rounded-lg border-2 border-dashed border-muted">
         <h2 className="text-2xl font-headline font-semibold mb-2">New Recording</h2>
         <p className="text-muted-foreground mb-8 max-w-sm">
-          Click the button below to start recording new audio using your device's microphone.
+          Click the button below to start recording new audio. Select a text and an emotion before you start.
         </p>
         <AudioRecorder onSave={onSaveRecording} />
       </div>
@@ -46,11 +46,11 @@ export function RecordingDetails({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex justify-between items-start gap-4">
         <div>
           <h2 className="text-3xl font-headline font-bold">
-            {recording.speakerId}
+            {recording.speakerId || 'No ID'}
           </h2>
           <p className="text-muted-foreground">
             Recorded on {new Date(recording.createdAt).toLocaleString()}
@@ -59,7 +59,7 @@ export function RecordingDetails({
         <div className="flex items-center gap-2">
            <Button variant="ghost" size="icon" onClick={onClearSelection}>
               <X className="h-5 w-5" />
-              <span className="sr-only">Go back</span>
+              <span className="sr-only">Go back to new recording</span>
             </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>

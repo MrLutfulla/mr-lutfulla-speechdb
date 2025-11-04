@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, StopCircle, Save, AlertCircle, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface AudioRecorderProps {
   onSave: (blob: Blob) => void;
@@ -43,7 +44,12 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
 
     let mediaStream: MediaStream;
     try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 48000,
+          channelCount: 1,
+        }
+      });
       setStream(mediaStream);
     } catch (err) {
       console.error('Error accessing microphone:', err);
@@ -62,7 +68,12 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
       setTimer((prev) => prev + 1);
     }, 1000);
 
-    mediaRecorderRef.current = new MediaRecorder(mediaStream);
+    const options = {
+      mimeType: 'audio/webm;codecs=opus',
+      audioBitsPerSecond: 128000,
+    };
+    
+    mediaRecorderRef.current = new MediaRecorder(mediaStream, options);
     chunksRef.current = [];
 
     mediaRecorderRef.current.ondataavailable = (event) => {
@@ -70,7 +81,7 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
     };
 
     mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
+      let blob = new Blob(chunksRef.current, { type: 'audio/webm' });
       setAudioBlob(blob);
       setStatus('stopped');
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -110,43 +121,45 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-      {status === 'error' && (
-        <div className="flex items-center gap-2 text-destructive p-3 bg-destructive/10 rounded-md">
-          <AlertCircle className="h-5 w-5" />
-          <p>Microphone access denied.</p>
-        </div>
-      )}
-      <div className="flex items-center justify-center gap-4 h-14">
-        {status === 'idle' && (
-          <Button onClick={startRecording} size="lg" className="w-48">
-            <Mic className="mr-2 h-5 w-5" />
-            Record
-          </Button>
-        )}
-        {status === 'permission' && <p>Requesting permission...</p>}
-        {status === 'recording' && (
-          <Button onClick={stopRecording} size="lg" variant="destructive" className="w-48">
-            <StopCircle className="mr-2 h-5 w-5" />
-            Stop
-          </Button>
-        )}
-        {status === 'stopped' && (
-          <div className="flex gap-2">
-            <Button onClick={handleSave} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <Save className="mr-2 h-5 w-5" />
-              Save
-            </Button>
-            <Button onClick={reset} size="lg" variant="outline">
-              <RefreshCcw className="mr-2 h-5 w-5" />
-              Discard
-            </Button>
+    <Card className="w-full max-w-sm shadow-lg">
+      <CardContent className="flex flex-col items-center gap-4 p-6">
+        {status === 'error' && (
+          <div className="flex items-center gap-2 text-destructive p-3 bg-destructive/10 rounded-md">
+            <AlertCircle className="h-5 w-5" />
+            <p>Microphone access denied.</p>
           </div>
         )}
-      </div>
-      <div className="text-3xl font-mono tabular-nums h-9">
-        {(status === 'recording' || status === 'stopped') && formatTime(timer)}
-      </div>
-    </div>
+        <div className="flex items-center justify-center gap-4 h-14">
+          {status === 'idle' && (
+            <Button onClick={startRecording} size="lg" className="w-48">
+              <Mic className="mr-2 h-5 w-5" />
+              Record
+            </Button>
+          )}
+          {status === 'permission' && <p>Requesting permission...</p>}
+          {status === 'recording' && (
+            <Button onClick={stopRecording} size="lg" variant="destructive" className="w-48">
+              <StopCircle className="mr-2 h-5 w-5" />
+              Stop
+            </Button>
+          )}
+          {status === 'stopped' && (
+            <div className="flex gap-2">
+              <Button onClick={handleSave} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                <Save className="mr-2 h-5 w-5" />
+                Save Recording
+              </Button>
+              <Button onClick={reset} size="lg" variant="outline">
+                <RefreshCcw className="mr-2 h-5 w-5" />
+                Discard
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="text-3xl font-mono tabular-nums h-9 text-muted-foreground">
+          {(status === 'recording' || status === 'stopped' || timer > 0) && formatTime(timer)}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

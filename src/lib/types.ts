@@ -5,6 +5,12 @@ export interface Recording {
   transcription: string;
   createdAt: string;
   labels?: string[];
+  emotion?: string;
+  intensity?: 'normal' | 'strong';
+  textId?: string;
+  gender?: 'male' | 'female';
+  age?: string;
+  region?: string;
 }
 
 export interface StoredRecording {
@@ -14,4 +20,10 @@ export interface StoredRecording {
   createdAt: string;
   audioBase64: string;
   labels?: string[];
+  emotion?: string;
+  intensity?: 'normal' | 'strong';
+  textId?: string;
+  gender?: 'male' | 'female';
+  age?: string;
+  region?: string;
 }

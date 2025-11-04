@@ -5,7 +5,7 @@ import { Recording, StoredRecording } from '@/lib/types';
 import { RecordingList } from '@/components/recording-list';
 import { RecordingDetails } from '@/components/recording-details';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const LOCAL_STORAGE_KEY = 'speechcraft-recordings';
@@ -83,13 +83,10 @@ export function SpeechCraftClient() {
             const response = await fetch(rec.audioUrl);
             const blob = await response.blob();
             const audioBase64 = await blobToBase64(blob);
+            const { audioUrl, ...rest } = rec;
             return {
-              id: rec.id,
-              speakerId: rec.speakerId,
-              transcription: rec.transcription,
-              createdAt: rec.createdAt,
+              ...rest,
               audioBase64,
-              labels: rec.labels,
             };
           })
         );
@@ -110,13 +107,17 @@ export function SpeechCraftClient() {
   );
 
   const handleAddRecording = async (audioBlob: Blob) => {
+    const newId = `rec-${Date.now()}`;
     const newRecording: Recording = {
-      id: `rec-${Date.now()}`,
+      id: newId,
       audioUrl: URL.createObjectURL(audioBlob),
-      speakerId: `Speaker ${recordings.length + 1}`,
+      speakerId: `UZ_${(recordings.length + 1).toString().padStart(2, '0')}`,
       transcription: '',
       createdAt: new Date().toISOString(),
       labels: [],
+      emotion: 'neutral',
+      intensity: 'normal',
+      textId: 'text1',
     };
     const updatedRecordings = [...recordings, newRecording];
     setRecordings(updatedRecordings);
@@ -167,8 +168,14 @@ export function SpeechCraftClient() {
       return;
     }
     try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      const dataToExport = stored ? JSON.parse(stored) : [];
+       const dataToExport = recordings.map(rec => {
+        const { audioUrl, ...rest } = rec;
+        const fileName = `${rec.speakerId}_${rec.textId}_${rec.emotion?.toUpperCase()}_${rec.intensity?.toUpperCase()}.wav`;
+        return {
+          ...rest,
+          fileName,
+        }
+      });
       
       const jsonString = JSON.stringify(dataToExport, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
@@ -209,12 +216,18 @@ export function SpeechCraftClient() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
       <div className="flex flex-col border-r bg-card h-full">
-        <div className="p-4 border-b flex justify-between items-center">
+        <div className="p-4 border-b flex justify-between items-center gap-2">
           <h2 className="text-lg font-headline font-semibold">Recordings</h2>
-          <Button onClick={handleExport} variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export Data
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setSelectedRecordingId(null)} variant="outline" size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New
+            </Button>
+            <Button onClick={handleExport} variant="outline" size="sm">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
         </div>
         <RecordingList
           recordings={recordings}
