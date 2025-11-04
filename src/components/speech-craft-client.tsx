@@ -222,7 +222,7 @@ export function SpeechCraftClient() {
       a.href = url;
       a.download = `speechcraft-export-${new Date().toISOString().split('T')[0]}.zip`;
       document.body.appendChild(a);
-      a.click();
+a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
