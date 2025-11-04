@@ -20,8 +20,13 @@ export function NewRecording({
   const [metadata, setMetadata] = useState<FormValues | null>(null);
 
   const nextSpeakerIndex = useMemo(() => {
+    if (recordings.length === 0) return 1;
     const speakerIds = recordings
-      .map((r) => parseInt(r.speakerId.split('_')[1], 10) || 0)
+      .map((r) => {
+        const parts = r.speakerId.split('_');
+        const numPart = parts[1];
+        return parseInt(numPart, 10);
+      })
       .filter((num) => !isNaN(num));
     return speakerIds.length > 0 ? Math.max(...speakerIds) + 1 : 1;
   }, [recordings]);
@@ -55,7 +60,6 @@ export function NewRecording({
 
   const handleSave = (blob: Blob) => {
     const dataToSave = metadata || initialRecordingState;
-    // The full metadata object is now passed
     onSaveRecording(blob, dataToSave as Omit<Recording, 'id' | 'audioUrl' | 'createdAt'>);
   };
 

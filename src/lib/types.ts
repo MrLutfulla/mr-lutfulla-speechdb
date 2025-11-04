@@ -19,7 +19,7 @@ export interface Recording {
   gender: 'male' | 'female';
   age: string;
   region: string;
-  personality?: PersonalityTraits;
+  personality: PersonalityTraits;
 }
 
 export interface StoredRecording {
@@ -33,5 +33,5 @@ export interface StoredRecording {
   gender: 'male' | 'female';
   age: string;
   region: string;
-  personality?: PersonalityTraits;
+  personality: PersonalityTraits;
 }

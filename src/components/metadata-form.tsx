@@ -84,15 +84,13 @@ const formSchema = z.object({
   emotion: z.string({ required_error: 'Emotsiyani tanlang' }),
   intensity: z.enum(['normal', 'strong']),
   textId: z.string({ required_error: 'Matnni tanlang' }),
-  personality: z
-    .object({
-      openness: z.boolean().default(false),
-      conscientiousness: z.boolean().default(false),
-      extraversion: z.boolean().default(false),
-      agreeableness: z.boolean().default(false),
-      neuroticism: z.boolean().default(false),
-    })
-    .optional(),
+  personality: z.object({
+    openness: z.boolean().default(false),
+    conscientiousness: z.boolean().default(false),
+    extraversion: z.boolean().default(false),
+    agreeableness: z.boolean().default(false),
+    neuroticism: z.boolean().default(false),
+  }),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
