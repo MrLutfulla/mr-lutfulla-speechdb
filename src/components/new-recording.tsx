@@ -3,6 +3,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { MetadataForm, FormValues } from './metadata-form';
 import { Recording } from '@/lib/types';
+import { AudioRecorder } from './audio-recorder';
+
 
 interface NewRecordingProps {
   onSaveRecording: (
@@ -17,14 +19,14 @@ export function NewRecording({
   recordings,
 }: NewRecordingProps) {
   const [metadata, setMetadata] = useState<FormValues | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
   const nextSpeakerIndex = useMemo(() => {
     if (recordings.length === 0) return 1;
     const speakerIds = recordings
       .map((r) => {
-        const parts = r.speakerId.split('_');
-        const numPart = parts.length > 1 ? parts[1] : undefined;
-        return numPart ? parseInt(numPart, 10) : NaN;
+        const match = r.speakerId.match(/^UZ_(\d+)/);
+        return match ? parseInt(match[1], 10) : NaN;
       })
       .filter((num) => !isNaN(num));
     return speakerIds.length > 0 ? Math.max(...speakerIds) + 1 : 1;
@@ -57,23 +59,26 @@ export function NewRecording({
     setMetadata(values);
   }, []);
 
-  const handleSave = (blob: Blob) => {
+  const handleRecord = (blob: Blob) => {
     const dataToSave = metadata || initialRecordingState;
     onSaveRecording(blob, dataToSave as Omit<Recording, 'id' | 'audioUrl' | 'createdAt'>);
   };
-
+  
   const formState = metadata || initialRecordingState;
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8 rounded-lg">
       <div className="w-full max-w-2xl space-y-6">
+        <div className="flex flex-col items-center gap-4 pb-8">
+            <AudioRecorder onSave={handleRecord} />
+        </div>
         <MetadataForm
           key={formState.speakerId}
           recording={formState}
           onSave={() => {}}
           isNewRecording={true}
           onValuesChange={handleValuesChange}
-          onRecord={handleSave}
+          onRecord={() => {}}
         />
       </div>
     </div>

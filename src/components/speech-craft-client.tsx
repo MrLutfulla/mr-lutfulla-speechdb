@@ -120,12 +120,10 @@ export function SpeechCraftClient() {
     metadata: Omit<Recording, "id" | "audioUrl" | "createdAt">
   ) => {
     const id = `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}_${Date.now()}`;
-    const speakerKey = `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}`;
-
+    
     const newRecording: Recording = {
       id,
       ...metadata,
-      speakerId: speakerKey,
       audioUrl: URL.createObjectURL(audioBlob),
       createdAt: new Date().toISOString(),
     };
@@ -170,9 +168,19 @@ export function SpeechCraftClient() {
     try {
       const zip = new JSZip();
       const metadata: any[] = [];
+      const usedFileNames = new Set<string>();
 
       for (const rec of recordings) {
-        const fileName = `${rec.speakerId}.wav`;
+        let baseName = `${rec.speakerId}_${rec.textId}_${rec.emotion}_${rec.intensity}`;
+        let fileName = `${baseName}.wav`;
+        let counter = 1;
+        
+        while (usedFileNames.has(fileName)) {
+          fileName = `${baseName}_${counter}.wav`;
+          counter++;
+        }
+        usedFileNames.add(fileName);
+
         const { audioUrl, id, ...rest } = rec;
 
         metadata.push({ ...rest, id, fileName });

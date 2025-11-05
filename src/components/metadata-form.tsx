@@ -109,7 +109,6 @@ export function MetadataForm({
   onSave,
   isNewRecording,
   onValuesChange,
-  onRecord,
 }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -131,19 +130,17 @@ export function MetadataForm({
     },
   });
   
-  const stableOnValuesChange = useCallback(onValuesChange, []);
+  const stableOnValuesChange = useCallback(onValuesChange || (() => {}), []);
 
   useEffect(() => {
-    if (stableOnValuesChange) {
-      const subscription = form.watch((values) => {
-        const result = formSchema.safeParse(values);
-        if (result.success) {
-          stableOnValuesChange(result.data as FormValues);
-        }
-      });
-      return () => subscription.unsubscribe();
-    }
-  }, [form, stableOnValuesChange, formSchema]);
+    const subscription = form.watch((values) => {
+      const result = formSchema.safeParse(values);
+      if (result.success) {
+        stableOnValuesChange(result.data as FormValues);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, stableOnValuesChange]);
 
 
   useEffect(() => {
@@ -179,9 +176,9 @@ export function MetadataForm({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Matn va Ovoz Yozish</CardTitle>
+            <CardTitle>Matn (Context)</CardTitle>
             <CardDescription>
-              Quyidagi matnni tanlangan emotsiyada o'qing va yozib oling.
+              Quyidagi matnni tanlangan emotsiyada o'qing.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -215,11 +212,6 @@ export function MetadataForm({
             {selectedText && (
               <div className="p-4 border-l-4 border-primary bg-primary/10">
                 <p className="font-mono text-lg">"{selectedText}"</p>
-              </div>
-            )}
-             {isNewRecording && (
-              <div className="flex flex-col items-center gap-4 pt-4">
-                <AudioRecorder onSave={onRecord} />
               </div>
             )}
           </CardContent>
