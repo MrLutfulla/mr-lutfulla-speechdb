@@ -134,17 +134,14 @@ export function MetadataForm({
 
   useEffect(() => {
     if (!onValuesChange) return;
-
     const subscription = form.watch((values) => {
       const result = formSchema.safeParse(values);
       if (result.success) {
         onValuesChange(result.data as FormValues);
       }
     });
-
     return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onValuesChange]);
+  }, [form.watch, onValuesChange]);
 
 
   useEffect(() => {
@@ -440,5 +437,3 @@ export function MetadataForm({
     </Form>
   );
 }
-
-    
