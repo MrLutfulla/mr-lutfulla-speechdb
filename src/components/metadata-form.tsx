@@ -130,25 +130,19 @@ export function MetadataForm({
       },
     },
   });
-
-  const onValuesChangeCallback = useCallback(
-    (values: FormValues) => {
-      if (onValuesChange) {
-        onValuesChange(values);
-      }
-    },
-    [onValuesChange]
-  );
   
   useEffect(() => {
     const subscription = form.watch((values) => {
-      const result = formSchema.safeParse(values);
-      if (result.success) {
-        onValuesChangeCallback(result.data as FormValues);
+      if(onValuesChange) {
+        const result = formSchema.safeParse(values);
+        if (result.success) {
+            onValuesChange(result.data as FormValues);
+        }
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, onValuesChangeCallback]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.watch, onValuesChange]);
 
 
   useEffect(() => {
