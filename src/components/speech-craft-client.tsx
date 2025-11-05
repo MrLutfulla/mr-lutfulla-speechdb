@@ -83,7 +83,7 @@ export function SpeechCraftClient() {
         variant: 'destructive',
       });
     }
-  }, [toast]);
+  }, []);
   
   useEffect(() => {
     return () => {
@@ -97,25 +97,13 @@ export function SpeechCraftClient() {
       try {
         const recordingsToStore: StoredRecording[] = await Promise.all(
           updatedRecordings.map(async (rec) => {
-            if (rec.audioUrl.startsWith('blob:')) {
-              const response = await fetch(rec.audioUrl);
-              const blob = await response.blob();
-              const audioBase64 = await blobToBase64(blob);
-              const { audioUrl, ...rest } = rec;
-              return {
-                ...rest,
-                audioBase64,
-              };
-            }
-            // If it's not a blob URL, it's already a base64 string from a previous load
-            // This logic is flawed, let's fix it by re-fetching the blob every time.
             const response = await fetch(rec.audioUrl);
             const blob = await response.blob();
             const audioBase64 = await blobToBase64(blob);
             const { audioUrl, ...rest } = rec;
             return {
               ...rest,
-              audioBase64: audioBase64,
+              audioBase64,
             };
           })
         );
@@ -137,12 +125,16 @@ export function SpeechCraftClient() {
 
   const handleAddRecording = async (audioBlob: Blob, metadata: Omit<Recording, 'id' | 'audioUrl' | 'createdAt'>) => {
     const newId = `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}_${Date.now()}`;
+    
+    // Create a new speakerId that is a combination of speakerId, textId, emotion and intensity
+    const newSpeakerId = `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}`;
+    
     const newRecording: Recording = {
-      id: newId,
-      ...metadata,
-      speakerId: `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}`,
-      audioUrl: URL.createObjectURL(audioBlob),
-      createdAt: new Date().toISOString(),
+        id: newId,
+        ...metadata,
+        speakerId: newSpeakerId,
+        audioUrl: URL.createObjectURL(audioBlob),
+        createdAt: new Date().toISOString(),
     };
     
     const updatedRecordings = [...recordings, newRecording];
