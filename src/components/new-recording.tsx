@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { MetadataForm, FormValues } from './metadata-form';
-import { AudioRecorder } from './audio-recorder';
 import { Recording } from '@/lib/types';
 
 interface NewRecordingProps {
@@ -24,8 +23,8 @@ export function NewRecording({
     const speakerIds = recordings
       .map((r) => {
         const parts = r.speakerId.split('_');
-        const numPart = parts[1];
-        return parseInt(numPart, 10);
+        const numPart = parts.length > 1 ? parts[1] : undefined;
+        return numPart ? parseInt(numPart, 10) : NaN;
       })
       .filter((num) => !isNaN(num));
     return speakerIds.length > 0 ? Math.max(...speakerIds) + 1 : 1;
@@ -74,11 +73,8 @@ export function NewRecording({
           onSave={() => {}}
           isNewRecording={true}
           onValuesChange={handleValuesChange}
-        >
-          <div className="flex flex-col items-center gap-4 p-6">
-            <AudioRecorder onSave={handleSave} />
-          </div>
-        </MetadataForm>
+          onRecord={handleSave}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AudioRecorder } from './audio-recorder';
 
 const emotions = [
   { id: 'neutral', label: 'Neutral' },
@@ -100,7 +101,7 @@ interface MetadataFormProps {
   onSave: (values: any) => void;
   isNewRecording: boolean;
   onValuesChange?: (values: FormValues) => void;
-  children?: React.ReactNode;
+  onRecord: (blob: Blob) => void;
 }
 
 export function MetadataForm({
@@ -108,7 +109,7 @@ export function MetadataForm({
   onSave,
   isNewRecording,
   onValuesChange,
-  children,
+  onRecord,
 }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -130,18 +131,24 @@ export function MetadataForm({
     },
   });
 
-  const watchedValues = form.watch();
-
+  const onValuesChangeCallback = useCallback(
+    (values: FormValues) => {
+      if (onValuesChange) {
+        onValuesChange(values);
+      }
+    },
+    [onValuesChange]
+  );
+  
   useEffect(() => {
-    if (!onValuesChange) return;
     const subscription = form.watch((values) => {
       const result = formSchema.safeParse(values);
       if (result.success) {
-        onValuesChange(result.data as FormValues);
+        onValuesChangeCallback(result.data as FormValues);
       }
     });
     return () => subscription.unsubscribe();
-  }, [form.watch, onValuesChange]);
+  }, [form, onValuesChangeCallback]);
 
 
   useEffect(() => {
@@ -170,19 +177,19 @@ export function MetadataForm({
     });
   }
 
-  const selectedText = texts.find((t) => t.id === watchedValues.textId)?.label;
+  const selectedText = texts.find((t) => t.id === form.watch('textId'))?.label;
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Matn (Context)</CardTitle>
+            <CardTitle>Matn va Ovoz Yozish</CardTitle>
             <CardDescription>
-              Quyidagi matnni tanlangan emotsiyada ayting.
+              Quyidagi matnni tanlangan emotsiyada o'qing va yozib oling.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <FormField
               control={form.control}
               name="textId"
@@ -211,8 +218,13 @@ export function MetadataForm({
               )}
             />
             {selectedText && (
-              <div className="mt-4 p-4 border-l-4 border-primary bg-primary/10">
+              <div className="p-4 border-l-4 border-primary bg-primary/10">
                 <p className="font-mono text-lg">"{selectedText}"</p>
+              </div>
+            )}
+             {isNewRecording && (
+              <div className="flex flex-col items-center gap-4 pt-4">
+                <AudioRecorder onSave={onRecord} />
               </div>
             )}
           </CardContent>
@@ -425,8 +437,6 @@ export function MetadataForm({
             ))}
           </CardContent>
         </Card>
-
-        {children}
 
         {!isNewRecording && (
           <Button type="submit" disabled={!form.formState.isDirty} size="lg">

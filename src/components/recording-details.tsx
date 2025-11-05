@@ -81,6 +81,7 @@ export function RecordingDetails({
         recording={recording} 
         onSave={onUpdateRecording}
         isNewRecording={false}
+        onRecord={() => {}}
        />
     </div>
   );
