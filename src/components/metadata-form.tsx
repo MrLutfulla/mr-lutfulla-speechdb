@@ -143,7 +143,7 @@ export function MetadataForm({
       });
       return () => subscription.unsubscribe();
     }
-  }, [form.watch, stableOnValuesChange, formSchema]);
+  }, [form, stableOnValuesChange, formSchema]);
 
 
   useEffect(() => {
