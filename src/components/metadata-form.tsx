@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AudioRecorder } from './audio-recorder';
 
 const emotions = [
   { id: 'neutral', label: 'Neutral' },
@@ -49,6 +48,7 @@ const texts = [
   { id: 'text1', label: 'Bolalar eshik yonida gaplashmoqda.' },
   { id: 'text2', label: 'Itlar deraza yonida o‘tiribdi.' },
   { id: 'text3', label: 'Bugun osmon tiniq, shamol yo‘q.' },
+  { id: 'text_new', label: 'Men bu narsani kutmagan edim, lekin baribir hammasi yaxshi bo‘ldi.' },
 ];
 
 const ageRanges = ['18-25', '26-35', '36-45', '46-55', '56+'];
@@ -100,15 +100,11 @@ interface MetadataFormProps {
   recording: Partial<Recording>;
   onSave: (values: any) => void;
   isNewRecording: boolean;
-  onValuesChange?: (values: FormValues) => void;
-  onRecord: (blob: Blob) => void;
 }
 
 export function MetadataForm({
   recording,
   onSave,
-  isNewRecording,
-  onValuesChange,
 }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -129,19 +125,6 @@ export function MetadataForm({
       },
     },
   });
-  
-  const stableOnValuesChange = useCallback(onValuesChange || (() => {}), []);
-
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      const result = formSchema.safeParse(values);
-      if (result.success) {
-        stableOnValuesChange(result.data as FormValues);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, stableOnValuesChange]);
-
 
   useEffect(() => {
     form.reset({
@@ -304,7 +287,6 @@ export function MetadataForm({
                     <Input
                       placeholder="e.g. UZ_01"
                       {...field}
-                      disabled={isNewRecording}
                     />
                   </FormControl>
                   <FormMessage />
@@ -425,11 +407,9 @@ export function MetadataForm({
           </CardContent>
         </Card>
 
-        {!isNewRecording && (
-          <Button type="submit" disabled={!form.formState.isDirty} size="lg">
-            O'zgarishlarni saqlash
-          </Button>
-        )}
+        <Button type="submit" disabled={!form.formState.isDirty} size="lg">
+          O'zgarishlarni saqlash
+        </Button>
       </form>
     </Form>
   );

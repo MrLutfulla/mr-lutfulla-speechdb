@@ -1,85 +1,87 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { MetadataForm, FormValues } from './metadata-form';
-import { Recording } from '@/lib/types';
+import { useState } from 'react';
 import { AudioRecorder } from './audio-recorder';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { NewRecordingMetadata } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+const emotions = [
+  { id: 'neutral', label: 'Neutral' },
+  { id: 'calm', label: 'Calm' },
+  { id: 'happy', label: 'Happy' },
+  { id: 'sad', label: 'Sad' },
+  { id: 'angry', label: 'Angry' },
+  { id: 'fearful', label: 'Fearful' },
+  { id: 'disgust', label: 'Disgust' },
+  { id: 'surprised', label: 'Surprised' },
+];
+
+const textToRead = "Men bu narsani kutmagan edim, lekin baribir hammasi yaxshi bo‘ldi.";
 
 interface NewRecordingProps {
-  onSaveRecording: (
-    blob: Blob,
-    metadata: Omit<Recording, 'id' | 'audioUrl' | 'createdAt'>
-  ) => void;
-  recordings: Recording[];
+  onSaveRecording: (blob: Blob, metadata: NewRecordingMetadata) => void;
 }
 
-export function NewRecording({
-  onSaveRecording,
-  recordings,
-}: NewRecordingProps) {
-  const [metadata, setMetadata] = useState<FormValues | null>(null);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-
-  const nextSpeakerIndex = useMemo(() => {
-    if (recordings.length === 0) return 1;
-    const speakerIds = recordings
-      .map((r) => {
-        const match = r.speakerId.match(/^UZ_(\d+)/);
-        return match ? parseInt(match[1], 10) : NaN;
-      })
-      .filter((num) => !isNaN(num));
-    return speakerIds.length > 0 ? Math.max(...speakerIds) + 1 : 1;
-  }, [recordings]);
-
-  const initialRecordingState: Omit<
-    Recording,
-    'id' | 'audioUrl' | 'createdAt'
-  > = useMemo(
-    () => ({
-      speakerId: `UZ_${nextSpeakerIndex.toString().padStart(2, '0')}`,
-      textId: 'text1',
-      emotion: 'neutral',
-      intensity: 'normal' as 'normal' | 'strong',
-      gender: 'male' as 'male' | 'female',
-      age: '18-25',
-      region: 'toshkent',
-      personality: {
-        openness: false,
-        conscientiousness: false,
-        extraversion: false,
-        agreeableness: false,
-        neuroticism: false,
-      },
-    }),
-    [nextSpeakerIndex]
-  );
-
-  const handleValuesChange = useCallback((values: FormValues) => {
-    setMetadata(values);
-  }, []);
+export function NewRecording({ onSaveRecording }: NewRecordingProps) {
+  const [selectedEmotion, setSelectedEmotion] = useState('neutral');
 
   const handleRecord = (blob: Blob) => {
-    const dataToSave = metadata || initialRecordingState;
-    onSaveRecording(blob, dataToSave as Omit<Recording, 'id' | 'audioUrl' | 'createdAt'>);
+    onSaveRecording(blob, { emotion: selectedEmotion });
   };
-  
-  const formState = metadata || initialRecordingState;
 
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8 rounded-lg">
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="flex flex-col items-center gap-4 pb-8">
-            <AudioRecorder onSave={handleRecord} />
+    <div className="flex flex-col items-center justify-center h-full text-center p-4 md:p-8">
+      <div className="w-full max-w-2xl space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Gap matni</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xl md:text-2xl font-mono p-4 border-l-4 border-primary bg-primary/10 rounded-r-md">
+              "{textToRead}"
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>🎭 Emotsiya tanlang</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={selectedEmotion}
+              onValueChange={setSelectedEmotion}
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+            >
+              {emotions.map((emotion) => (
+                <div key={emotion.id}>
+                  <RadioGroupItem
+                    value={emotion.id}
+                    id={emotion.id}
+                    className="sr-only"
+                  />
+                  <Label
+                    htmlFor={emotion.id}
+                    className={cn(
+                      'flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer',
+                      selectedEmotion === emotion.id && 'border-primary'
+                    )}
+                  >
+                    {emotion.label}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </CardContent>
+        </Card>
+
+        <div className='flex flex-col items-center gap-4'>
+           <h2 className="text-lg font-semibold">🔈 Tayyor bo‘lsangiz, yozishni boshlang.</h2>
+           <AudioRecorder onSave={handleRecord} />
         </div>
-        <MetadataForm
-          key={formState.speakerId}
-          recording={formState}
-          onSave={() => {}}
-          isNewRecording={true}
-          onValuesChange={handleValuesChange}
-          onRecord={() => {}}
-        />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Recording, StoredRecording } from "@/lib/types";
+import { Recording, StoredRecording, NewRecordingMetadata } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,6 @@ export function SpeechCraftClient() {
   /* --- Mount: Load from LocalStorage --- */
   useEffect(() => {
     setIsClient(true);
-
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
@@ -115,15 +114,32 @@ export function SpeechCraftClient() {
   );
 
   /* --- Add Recording --- */
-  const handleAddRecording = async (
+    const handleAddRecording = async (
     audioBlob: Blob,
-    metadata: Omit<Recording, "id" | "audioUrl" | "createdAt">
+    metadata: NewRecordingMetadata
   ) => {
-    const id = `${metadata.speakerId}_${metadata.textId}_${metadata.emotion}_${metadata.intensity}_${Date.now()}`;
-    
+    const nextId = recordings.length + 1;
+    const speakerId = `UZ_${String(nextId).padStart(2, '0')}`;
+    const textId = 'text_new';
+
+    const id = `${speakerId}_${textId}_${metadata.emotion}_${Date.now()}`;
+
     const newRecording: Recording = {
       id,
-      ...metadata,
+      speakerId,
+      textId,
+      emotion: metadata.emotion,
+      intensity: 'normal',
+      gender: 'male',
+      age: '18-25',
+      region: 'toshkent',
+      personality: {
+        openness: false,
+        conscientiousness: false,
+        extraversion: false,
+        agreeableness: false,
+        neuroticism: false,
+      },
       audioUrl: URL.createObjectURL(audioBlob),
       createdAt: new Date().toISOString(),
     };
@@ -252,7 +268,7 @@ export function SpeechCraftClient() {
             onClearSelection={() => setSelectedRecordingId(null)}
           />
         ) : (
-          <NewRecording onSaveRecording={handleAddRecording} recordings={recordings} />
+          <NewRecording onSaveRecording={handleAddRecording} />
         )}
       </div>
     </div>

@@ -22,6 +22,10 @@ export interface Recording {
   personality: PersonalityTraits;
 }
 
+export type NewRecordingMetadata = {
+  emotion: string;
+};
+
 export interface StoredRecording {
   id: string;
   speakerId: string;
