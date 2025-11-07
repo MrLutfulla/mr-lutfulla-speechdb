@@ -262,8 +262,8 @@ export function SpeechCraftClient() {
         </div>
         
         {/* Footer with New Button */}
-        <div className="p-4 border-t flex justify-start">
-           <Button onClick={() => setSelectedRecordingId(null)} size="lg">
+        <div className="p-4 border-t flex">
+           <Button onClick={() => setSelectedRecordingId(null)} size="lg" className="w-full">
               <PlusCircle className="mr-2 h-4 w-4" /> New Recording
             </Button>
         </div>
