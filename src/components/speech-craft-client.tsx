@@ -188,7 +188,8 @@ export function SpeechCraftClient() {
 
       for (const rec of recordings) {
         // Extract the base speaker ID like "UZ_01" from a potentially longer string
-        const baseSpeakerId = rec.speakerId.split('_')[0] + '_' + rec.speakerId.split('_')[1];
+        const baseSpeakerIdMatch = rec.speakerId.match(/^UZ_\d+/);
+        const baseSpeakerId = baseSpeakerIdMatch ? baseSpeakerIdMatch[0] : rec.speakerId;
         
         let baseName = `${baseSpeakerId}_${rec.textId}_${rec.emotion}_${rec.intensity}`;
         let fileName = `${baseName}.wav`;
@@ -243,22 +244,29 @@ export function SpeechCraftClient() {
     <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
       {/* Sidebar */}
       <div className="flex flex-col border-r bg-card h-full">
+        {/* Header */}
         <div className="p-4 border-b flex justify-between items-center gap-2">
           <h2 className="text-lg font-headline font-semibold">Recordings</h2>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setSelectedRecordingId(null)} variant="outline" size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> New
-            </Button>
-            <Button onClick={handleExport} variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" /> Export
-            </Button>
-          </div>
+          <Button onClick={handleExport} variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
         </div>
-        <RecordingList
-          recordings={recordings}
-          selectedRecordingId={selectedRecordingId}
-          onSelectRecording={setSelectedRecordingId}
-        />
+
+        {/* Recording List */}
+        <div className="flex-1 overflow-y-auto">
+          <RecordingList
+            recordings={recordings}
+            selectedRecordingId={selectedRecordingId}
+            onSelectRecording={setSelectedRecordingId}
+          />
+        </div>
+        
+        {/* Footer with New Button */}
+        <div className="p-4 border-t flex justify-end">
+           <Button onClick={() => setSelectedRecordingId(null)} size="lg">
+              <PlusCircle className="mr-2 h-4 w-4" /> New Recording
+            </Button>
+        </div>
       </div>
 
       {/* Main Panel */}
