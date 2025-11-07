@@ -144,14 +144,14 @@ export function SpeechCraftClient() {
     audioBlob: Blob,
     metadata: NewRecordingMetadata
   ) => {
-    const nextId =
+    const nextIdNumber =
       recordings.length > 0
         ? Math.max(
             ...recordings.map((r) => parseInt(r.speakerId.split("_")[1] || "0"))
           ) + 1
         : 1;
 
-    const speakerId = `UZ_${String(nextId).padStart(2, "0")}`;
+    const speakerId = `UZ_${String(nextIdNumber).padStart(2, "0")}`;
     const textId = "text_new";
 
     const id = `${speakerId}_${textId}_${metadata.emotion}_${Date.now()}`;
@@ -293,14 +293,14 @@ export function SpeechCraftClient() {
     [recordings, selectedRecordingId]
   );
   
-  if (!isClient) return <div className="w-full h-full bg-background" />;
+  if (!isClient) return <div className="w-full h-screen bg-background" />;
 
   const showList = !isMobile || (isMobile && view === 'list');
   const showDetails = !isMobile || (isMobile && (view === 'details' || view === 'new'));
 
   return (
-    <div className="grid md:grid-cols-[350px_1fr] h-full">
-      <div className={cn("flex-col border-r bg-card h-full", showList ? "flex" : "hidden md:flex")}>
+    <div className="flex h-screen">
+      <div className={cn("flex flex-col border-r bg-card w-[350px] shrink-0", showList ? "flex" : "hidden md:flex")}>
         <div className="p-4 flex justify-between items-center border-b">
           <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
           <Button onClick={handleExport} variant="outline" size="sm">
@@ -319,7 +319,7 @@ export function SpeechCraftClient() {
         </div>
       </div>
 
-      <div className={cn("h-full", showDetails ? "block" : "hidden md:block")}>
+      <main className={cn("flex-1", showDetails ? "block" : "hidden md:block")}>
         <ScrollArea className="h-full">
          <div className="p-4 md:p-8">
             {view === 'new' && (
@@ -346,7 +346,7 @@ export function SpeechCraftClient() {
             )}
           </div>
         </ScrollArea>
-      </div>
+      </main>
     </div>
   );
 }
