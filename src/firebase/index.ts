@@ -5,6 +5,7 @@ import {
   connectFirestoreEmulator,
   type Firestore,
 } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import { firebaseConfig } from './config';
 
 // The function `getApp` returns the initialized `FirebaseApp` instance.
@@ -21,8 +22,9 @@ function initializeFirebase() {
   const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const firestore = getFirestore(app);
+  const storage = getStorage(app);
 
-  return { app, auth, firestore };
+  return { app, auth, firestore, storage };
 }
 
 export * from './provider';

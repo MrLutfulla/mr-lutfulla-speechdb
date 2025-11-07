@@ -22,6 +22,7 @@ interface RecordingDetailsProps {
   onUpdateRecording: (recording: Recording) => void;
   onDeleteRecording: (id: string) => void;
   onClearSelection: () => void;
+  isReadOnly?: boolean;
 }
 
 export function RecordingDetails({
@@ -29,7 +30,12 @@ export function RecordingDetails({
   onUpdateRecording,
   onDeleteRecording,
   onClearSelection,
+  isReadOnly = false,
 }: RecordingDetailsProps) {
+
+  const createdAtDate = recording.createdAt instanceof Date 
+    ? recording.createdAt 
+    : new Date(recording.createdAt as string);
 
   return (
     <div className="space-y-6">
@@ -44,37 +50,39 @@ export function RecordingDetails({
               {recording.speakerId || 'No ID'}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Recorded on {new Date(recording.createdAt).toLocaleString()}
+              {createdAtDate.toLocaleString()} yozilgan
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon">
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Delete Recording</span>
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the
-                  recording and its metadata from your browser storage.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onDeleteRecording(recording.id)}
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        {!isReadOnly && (
+          <div className="flex items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Delete Recording</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    recording from the server.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDeleteRecording(recording.id)}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
 
       <AudioPlayer audioUrl={recording.audioUrl} />
@@ -83,6 +91,7 @@ export function RecordingDetails({
         recording={recording} 
         onSave={onUpdateRecording}
         isNewRecording={false}
+        isReadOnly={isReadOnly}
        />
     </div>
   );

@@ -1,21 +1,36 @@
 'use client';
 
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Header } from '@/components/header';
 import { SpeechCraftClient } from '@/components/speech-craft-client';
 import { Loader2 } from 'lucide-react';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { UserProfile } from '@/lib/types';
+
 
 export default function Home() {
   const { user, loading } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+    if (!loading && user && firestore) {
+      // Save or update user profile in Firestore
+      const userRef = doc(firestore, 'users', user.uid);
+      const userData: Partial<UserProfile> = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+      };
+      setDoc(userRef, userData, { merge: true });
+    }
+  }, [user, loading, router, firestore]);
 
   if (loading || !user) {
     return (

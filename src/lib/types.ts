@@ -1,5 +1,7 @@
 'use client';
 
+import type { Timestamp } from 'firebase/firestore';
+
 export interface PersonalityTraits {
   extrovert: boolean;
   introvert: boolean;
@@ -14,8 +16,9 @@ export interface PersonalityTraits {
 export interface Recording {
   id: string;
   audioUrl: string;
+  storagePath: string;
   speakerId: string;
-  createdAt: string;
+  createdAt: string | Timestamp;
   emotion: string;
   intensity: 'normal' | 'strong';
   textId: string;
@@ -30,6 +33,7 @@ export type NewRecordingMetadata = {
   textId: string;
 };
 
+// This type is no longer needed as we are not using localStorage
 export interface StoredRecording {
   id: string;
   speakerId: string;
@@ -42,4 +46,12 @@ export interface StoredRecording {
   age: string;
   region: string;
   personality: PersonalityTraits;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  recordingCount?: number;
 }

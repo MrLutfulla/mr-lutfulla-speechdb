@@ -4,27 +4,36 @@ import { Recording } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
-import { Mic2 } from 'lucide-react';
+import { Mic2, Loader2 } from 'lucide-react';
+import { Skeleton } from './ui/skeleton';
 
 interface RecordingListProps {
   recordings: Recording[];
   selectedRecordingId: string | null;
   onSelectRecording: (id: string) => void;
+  loading: boolean;
 }
 
 export function RecordingList({
   recordings,
   selectedRecordingId,
   onSelectRecording,
+  loading,
 }: RecordingListProps) {
-  const sortedRecordings = [...recordings].sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  if (loading) {
+    return (
+      <div className="p-2 space-y-2">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
+  }
 
   return (
     <ScrollArea className="flex-1">
-      {sortedRecordings.length === 0 ? (
+      {recordings.length === 0 ? (
         <div className="text-center p-8 text-muted-foreground flex flex-col items-center justify-center h-full">
           <Mic2 className="w-16 h-16 mb-4 text-muted-foreground/50" />
           <p className="font-semibold">No recordings yet</p>
@@ -32,7 +41,7 @@ export function RecordingList({
         </div>
       ) : (
         <div className="p-2 space-y-1">
-          {sortedRecordings.map((recording) => (
+          {recordings.map((recording) => (
             <button
               key={recording.id}
               onClick={() => onSelectRecording(recording.id)}
@@ -54,7 +63,7 @@ export function RecordingList({
                       : 'text-muted-foreground'
                   )}
                 >
-                  {formatDistanceToNow(new Date(recording.createdAt), {
+                  {formatDistanceToNow(new Date(recording.createdAt as string), {
                     addSuffix: true,
                   })}
                 </time>

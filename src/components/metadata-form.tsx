@@ -112,12 +112,14 @@ interface MetadataFormProps {
   recording: Partial<Recording>;
   onSave: (values: any) => void;
   isNewRecording: boolean;
+  isReadOnly?: boolean;
 }
 
 export function MetadataForm({
   recording,
   onSave,
   isNewRecording,
+  isReadOnly = false,
 }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -164,15 +166,23 @@ export function MetadataForm({
     });
   }, [recording, form]);
 
+  useEffect(() => {
+    if (isReadOnly) {
+      form.disable();
+    } else {
+      form.enable();
+    }
+  }, [isReadOnly, form]);
+
   function onSubmit(values: FormValues) {
     onSave({
       ...recording,
       ...values,
     });
-    form.reset(values);
+    form.reset(values); // Keep form values after saving
   }
 
-  const selectedText = texts.find((t) => t.id === recording.textId)?.label;
+  const selectedText = texts.find((t) => t.id === form.watch('textId'))?.label;
 
   return (
     <Form {...form}>
@@ -182,12 +192,37 @@ export function MetadataForm({
             <CardTitle>Matn (Context)</CardTitle>
           </CardHeader>
           <CardContent>
-            {selectedText ? (
-              <div className="p-4 border-l-4 border-primary bg-primary/10">
+             <FormField
+              control={form.control}
+              name="textId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={!isNewRecording || isReadOnly}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Matnni tanlang..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {texts.map((text) => (
+                          <SelectItem key={text.id} value={text.id}>
+                            {text.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {selectedText && (
+              <div className="mt-4 p-4 border-l-4 border-primary bg-primary/10">
                 <p className="font-mono text-lg">"{selectedText}"</p>
               </div>
-            ) : (
-               <p className="text-muted-foreground">Yozuv uchun matn topilmadi.</p>
             )}
           </CardContent>
         </Card>
@@ -344,7 +379,7 @@ export function MetadataForm({
                   <FormItem>
                     <FormLabel>Hudud</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValuechange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -400,9 +435,11 @@ export function MetadataForm({
           </CardContent>
         </Card>
 
-        <Button type="submit" disabled={!form.formState.isDirty} size="lg">
-          O'zgarishlarni saqlash
-        </Button>
+        {!isReadOnly && (
+            <Button type="submit" disabled={!form.formState.isDirty} size="lg">
+              O'zgarishlarni saqlash
+            </Button>
+        )}
       </form>
     </Form>
   );

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Recording, StoredRecording, NewRecordingMetadata } from "@/lib/types";
+import { Recording, NewRecordingMetadata, UserProfile } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
-import { Download, PlusCircle, Trash2 } from "lucide-react";
+import { Download, PlusCircle, Trash2, HardDriveUpload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { NewRecording } from "@/components/new-recording";
 import JSZip from "jszip";
@@ -24,31 +24,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-
-
-const LOCAL_STORAGE_KEY = "speechcraft-recordings";
+import { useUser, useFirestore } from "@/firebase";
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  Timestamp,
+  query,
+  orderBy
+} from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { useRouter } from "next/navigation";
+import { isAdmin } from "@/lib/admins";
 
 /* ---------- Helper Functions ---------- */
-
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-
-const base64ToBlob = (base64: string): Blob => {
-  const [prefix, data] = base64.split(";base64,");
-  const contentType = prefix.split(":")[1];
-  const byteCharacters = atob(data);
-  const byteNumbers = new Array(byteCharacters.length)
-    .fill(0)
-    .map((_, i) => byteCharacters.charCodeAt(i));
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: contentType });
-};
 
 async function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
   try {
@@ -64,7 +56,6 @@ async function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
     return new Blob([wavBuffer], { type: "audio/wav" });
   } catch (error) {
     console.error("Failed to convert WebM to WAV:", error);
-    // Return an empty blob or re-throw the error, depending on desired handling
     throw error;
   }
 }
@@ -73,45 +64,51 @@ async function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
 
 export function SpeechCraftClient() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(
-    null
-  );
+  const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
   const [view, setView] = useState<'list' | 'new' | 'details'>('list');
+  const [loading, setLoading] = useState(true);
   
-  const isMobile = useIsMobile();
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
 
-  /* --- Mount: Load from LocalStorage --- */
+  const isMobile = useIsMobile();
+  const userIsAdmin = user ? isAdmin(user.uid) : false;
+
+  /* --- Mount: Load from Firestore --- */
   useEffect(() => {
     setIsClient(true);
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        const storedRecordings: StoredRecording[] = JSON.parse(stored);
-        const loaded = storedRecordings.map((rec) => {
-          const audioBlob = base64ToBlob(rec.audioBase64);
-          const audioUrl = URL.createObjectURL(audioBlob);
-          return { ...rec, audioUrl };
-        });
-        setRecordings(loaded);
-      }
-    } catch (err) {
-      console.error("Failed to load recordings:", err);
+    if (!user || !firestore) return;
+
+    setLoading(true);
+    const recordingsCollection = collection(firestore, 'users', user.uid, 'recordings');
+    const q = query(recordingsCollection, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loaded: Recording[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+        } as Recording;
+      });
+      setRecordings(loaded);
+      setLoading(false);
+    }, (error) => {
+      console.error("Failed to load recordings:", error);
       toast({
         title: "Xatolik",
-        description: "Yozuvlarni brauzer xotirasidan yuklab bo'lmadi.",
+        description: "Yozuvlarni serverdan yuklab bo'lmadi.",
         variant: "destructive",
       });
-    }
-  }, [toast]);
+      setLoading(false);
+    });
 
-  /* --- Unmount: Cleanup object URLs --- */
-  useEffect(() => {
-    return () => {
-      recordings.forEach((r) => URL.revokeObjectURL(r.audioUrl));
-    };
-  }, [recordings]);
+    return () => unsubscribe();
+  }, [user, firestore, toast]);
 
   /* --- View Management --- */
   const handleClearSelection = () => {
@@ -129,125 +126,130 @@ export function SpeechCraftClient() {
     setView('new');
   };
 
-  /* --- Save to LocalStorage --- */
-  const updateLocalStorage = useCallback(
-    async (list: Recording[]) => {
-      if (!isClient) return;
-      try {
-        const toStore: StoredRecording[] = await Promise.all(
-          list.map(async (rec) => {
-            // Re-create blob from URL to ensure it's fresh
-            const response = await fetch(rec.audioUrl);
-            const blob = await response.blob();
-            const audioBase64 = await blobToBase64(blob);
-
-            // Destructure to remove the runtime-only audioUrl
-            const { audioUrl, ...rest } = rec;
-            return { ...rest, audioBase64 };
-          })
-        );
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(toStore));
-      } catch (err) {
-        console.error("Failed to save:", err);
-        toast({
-          title: "Xatolik",
-          description: "Yozuvlarni brauzer xotirasiga saqlab bo'lmadi.",
-          variant: "destructive",
-        });
-      }
-    },
-    [toast, isClient]
-  );
-
-
   /* --- Add Recording --- */
   const handleAddRecording = async (
     audioBlob: Blob,
     metadata: NewRecordingMetadata
   ) => {
-    const nextIdNumber =
-      recordings.length > 0
-        ? Math.max(
-            ...recordings.map((r) => {
-                const parts = r.speakerId.split("_");
-                return parseInt(parts[1] || "0");
-            })
-          ) + 1
+    if (!user || !firestore) return;
+
+    toast({ title: "Saqlanmoqda...", description: "Yozuvingiz serverga yuklanmoqda." });
+
+    try {
+      const nextIdNumber = recordings.length > 0
+        ? Math.max(...recordings.map(r => parseInt(r.speakerId.split('_')[1] || '0'))) + 1
         : 1;
 
-    const speakerId = `UZ_${String(nextIdNumber).padStart(2, "0")}`;
-    const id = `${speakerId}_${metadata.textId}_${metadata.emotion}_${Date.now()}`;
+      const speakerId = `UZ_${String(nextIdNumber).padStart(2, '0')}`;
+      const recordingId = `${speakerId}_${metadata.textId}_${metadata.emotion}_${Date.now()}`;
+      
+      // 1. Upload audio file to Firebase Storage
+      const storage = getStorage();
+      const storagePath = `recordings/${user.uid}/${recordingId}.wav`;
+      const storageRef = ref(storage, storagePath);
+      const wavBlob = await convertWebmToWav(audioBlob);
+      await uploadBytes(storageRef, wavBlob);
+      const audioUrl = await getDownloadURL(storageRef);
 
-    const newRecording: Recording = {
-      id,
-      speakerId,
-      textId: metadata.textId,
-      emotion: metadata.emotion,
-      intensity: "normal",
-      gender: "male",
-      age: "18 yoshgacha",
-      region: "toshkent",
-      personality: {
-        extrovert: false,
-        introvert: false,
-        optimistic: false,
-        emotional: false,
-        calm: false,
-        analytical: false,
-        leader: false,
-        compassionate: false,
-      },
-      audioUrl: URL.createObjectURL(audioBlob),
-      createdAt: new Date().toISOString(),
-    };
+      // 2. Save metadata to Firestore
+      const recordingsCollection = collection(firestore, 'users', user.uid, 'recordings');
+      const newRecordingDoc: Omit<Recording, 'id' | 'createdAt'> = {
+        audioUrl,
+        storagePath,
+        speakerId,
+        textId: metadata.textId,
+        emotion: metadata.emotion,
+        intensity: "normal",
+        gender: "male",
+        age: "18 yoshgacha",
+        region: "toshkent",
+        personality: {
+          extrovert: false, introvert: false, optimistic: false, emotional: false,
+          calm: false, analytical: false, leader: false, compassionate: false,
+        },
+      };
 
-    const updated = [...recordings, newRecording];
-    setRecordings(updated);
-    await updateLocalStorage(updated);
+      const docRef = await addDoc(recordingsCollection, {
+        ...newRecordingDoc,
+        createdAt: Timestamp.now(),
+      });
 
-    setSelectedRecordingId(newRecording.id);
-    setView('details');
-    toast({ title: "Yozuv saqlandi", description: "Yangi yozuvingiz qo'shildi." });
+      setSelectedRecordingId(docRef.id);
+      setView('details');
+      toast({ title: "Yozuv saqlandi", description: "Yangi yozuvingiz serverga qo'shildi." });
+
+    } catch (error) {
+      console.error("Error adding recording:", error);
+      toast({ title: "Xatolik", description: "Yozuvni saqlashda xato yuz berdi.", variant: "destructive" });
+    }
   };
 
   /* --- Update Recording Metadata --- */
-  const handleUpdateRecording = async (updatedRecording: Recording) => {
-    const updated = recordings.map((r) =>
-      r.id === updatedRecording.id ? updatedRecording : r
-    );
-    setRecordings(updated);
-    await updateLocalStorage(updated);
-    toast({
-      title: "Ma'lumotlar yangilandi",
-      description: "O'zgarishlaringiz saqlandi.",
-    });
+  const handleUpdateRecording = async (updatedRecording: Omit<Recording, 'createdAt'>) => {
+    if (!user || !firestore) return;
+    const { id, ...dataToUpdate } = updatedRecording;
+    const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
+    
+    try {
+      await updateDoc(docRef, dataToUpdate);
+      toast({
+        title: "Ma'lumotlar yangilandi",
+        description: "O'zgarishlaringiz saqlandi.",
+      });
+    } catch(error) {
+      console.error("Error updating recording:", error);
+      toast({ title: "Xatolik", description: "Yangilanishni saqlab bo'lmadi.", variant: "destructive" });
+    }
   };
 
   /* --- Delete Recording --- */
   const handleDeleteRecording = async (id: string) => {
-    const target = recordings.find((r) => r.id === id);
-    if (target?.audioUrl) URL.revokeObjectURL(target.audioUrl);
+    if (!user || !firestore) return;
+    
+    const recordingToDelete = recordings.find(r => r.id === id);
+    if (!recordingToDelete) return;
 
-    const updated = recordings.filter((r) => r.id !== id);
-    setRecordings(updated);
-    await updateLocalStorage(updated);
+    toast({ title: "O'chirilmoqda..." });
 
-    if (selectedRecordingId === id) handleClearSelection();
-    toast({
-      title: "Yozuv o'chirildi",
-      description: "Tanlangan yozuv o'chirildi.",
-    });
+    try {
+      // 1. Delete file from Storage
+      const storage = getStorage();
+      const storageRef = ref(storage, recordingToDelete.storagePath);
+      await deleteObject(storageRef);
+
+      // 2. Delete doc from Firestore
+      const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
+      await deleteDoc(docRef);
+
+      if (selectedRecordingId === id) handleClearSelection();
+      toast({
+        title: "Yozuv o'chirildi",
+        description: "Tanlangan yozuv serverdan o'chirildi.",
+      });
+    } catch (error) {
+      console.error("Error deleting recording:", error);
+      toast({ title: "Xatolik", description: "Yozuvni o'chirishda xato yuz berdi.", variant: "destructive" });
+    }
   };
 
   const handleClearAll = async () => {
-    recordings.forEach(rec => URL.revokeObjectURL(rec.audioUrl));
-    setRecordings([]);
-    await updateLocalStorage([]);
-    handleClearSelection();
-    toast({
-      title: 'Barcha yozuvlar o‘chirildi',
-      description: 'Barcha saqlangan ma’lumotlar tozalandi.',
-    });
+    if (!user || !firestore) return;
+
+    toast({ title: "Barcha yozuvlar o'chirilmoqda..." });
+
+    // This is a batch operation, proceed with caution.
+    const deletePromises = recordings.map(rec => handleDeleteRecording(rec.id));
+    try {
+      await Promise.all(deletePromises);
+      handleClearSelection();
+      toast({
+        title: 'Barcha yozuvlar o‘chirildi',
+        description: 'Barcha saqlangan ma’lumotlar tozalandi.',
+      });
+    } catch (error) {
+       console.error("Error clearing all recordings:", error);
+       toast({ title: "Xatolik", description: "Yozuvlarni o'chirishda xato yuz berdi.", variant: "destructive" });
+    }
   };
 
  /* --- Export All Recordings --- */
@@ -270,28 +272,23 @@ export function SpeechCraftClient() {
       const metadata: any[] = [];
 
       for (const rec of recordings) {
-        // Sanitize the ID to create a valid filename
         const fileName = `${rec.id.replace(/[^a-zA-Z0-9_.-]/g, '_')}.wav`;
-
-        // Destructure to exclude the blob URL from the JSON metadata
-        const { audioUrl, ...rest } = rec;
-        metadata.push({ ...rest, fileName });
-
-        // Fetch the audio data from the blob URL
-        const response = await fetch(audioUrl);
-        const webmBlob = await response.blob();
+        const { audioUrl, storagePath, createdAt, ...rest } = rec;
         
-        // Convert to WAV format
-        const wavBlob = await convertWebmToWav(webmBlob);
+        metadata.push({ 
+          ...rest, 
+          createdAt: (createdAt as string), // Already a string
+          fileName 
+        });
 
-        // Add WAV file to the zip
+        const response = await fetch(audioUrl);
+        const wavBlob = await response.blob();
+        
         zip.file(fileName, wavBlob);
       }
 
-      // Add metadata.json file to the zip
       zip.file("metadata.json", JSON.stringify(metadata, null, 2));
 
-      // Generate the zip file and trigger download
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
@@ -322,7 +319,7 @@ export function SpeechCraftClient() {
     [recordings, selectedRecordingId]
   );
   
-  if (!isClient) return <div className="w-full h-screen bg-background" />;
+  if (!isClient || userLoading) return <div className="w-full h-screen bg-background" />;
 
   const showList = !isMobile || (isMobile && view === 'list');
   const showDetails = !isMobile || (isMobile && (view === 'details' || view === 'new'));
@@ -333,6 +330,11 @@ export function SpeechCraftClient() {
         <div className="p-4 flex justify-between items-center border-b">
           <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
            <div className="flex items-center gap-2">
+            {userIsAdmin && (
+              <Button onClick={() => router.push('/admin')} variant="secondary" size="sm">
+                Admin
+              </Button>
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={recordings.length === 0}>
@@ -343,7 +345,7 @@ export function SpeechCraftClient() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Haqiqatan ham oʻchirmoqchimisiz?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Bu amalni qaytarib boʻlmaydi. Bu barcha yozuvlarni brauzeringiz xotirasidan butunlay oʻchirib tashlaydi.
+                    Bu amalni qaytarib boʻlmaydi. Bu barcha yozuvlarni serverdan butunlay oʻchirib tashlaydi.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -363,6 +365,7 @@ export function SpeechCraftClient() {
           recordings={recordings}
           selectedRecordingId={selectedRecordingId}
           onSelectRecording={handleSelectRecording}
+          loading={loading}
         />
         <div className="p-4 border-t">
            <Button onClick={handleShowNewRecording} size="lg" className="w-full">
@@ -388,6 +391,7 @@ export function SpeechCraftClient() {
             )}
             {view === 'list' && !selectedRecording && (
                <div className="hidden md:flex h-full flex-col items-center justify-center bg-background text-muted-foreground p-8 min-h-[calc(100vh-10rem)]">
+                  <HardDriveUpload className="w-16 h-16 mb-4 text-muted-foreground/50" />
                   <h2 className="text-xl font-medium">Yozuvni tanlang</h2>
                   <p>Ko'rish yoki tahrirlash uchun ro'yxatdan yozuvni tanlang.</p>
                   <span className="text-sm mt-4">yoki</span>
