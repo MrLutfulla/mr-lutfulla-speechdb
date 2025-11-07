@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'SpeechCraft Studio',
+  title: 'MrL Speech craft',
   description: 'A professional GUI application for collecting speech data.',
 };
 

@@ -6,7 +6,7 @@ export function Header() {
       <div className="flex items-center gap-3">
         <Waves className="h-7 w-7 text-primary" />
         <h1 className="text-2xl font-headline font-bold text-foreground">
-          SpeechCraft Studio
+          MrL Speech craft
         </h1>
       </div>
     </header>
