@@ -208,7 +208,7 @@ export function SpeechCraftClient() {
 
     const updated = recordings.filter((r) => r.id !== id);
     setRecordings(updated);
-    await updateLocalStorage(updated);
+await updateLocalStorage(updated);
 
     if (selectedRecordingId === id) handleClearSelection();
     toast({
@@ -299,24 +299,24 @@ export function SpeechCraftClient() {
   const showDetails = !isMobile || (isMobile && (view === 'details' || view === 'new'));
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-full">
       <div className={cn("flex flex-col border-r bg-card w-[350px] shrink-0", showList ? "flex" : "hidden md:flex")}>
         <div className="p-4 flex justify-between items-center border-b">
           <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
-          <Button onClick={handleExport} variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" /> Eksport
-          </Button>
+           <div className="flex items-center gap-2">
+            <Button onClick={handleShowNewRecording} variant="outline" size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" /> Yangi
+            </Button>
+            <Button onClick={handleExport} variant="outline" size="sm">
+              <Download className="mr-2 h-4 w-4" /> Eksport
+            </Button>
+          </div>
         </div>
         <RecordingList
           recordings={recordings}
           selectedRecordingId={selectedRecordingId}
           onSelectRecording={handleSelectRecording}
         />
-        <div className="p-4 border-t">
-          <Button onClick={handleShowNewRecording} size="lg" className="w-full">
-            <PlusCircle className="mr-2 h-4 w-4" /> Yangi yozuv
-          </Button>
-        </div>
       </div>
 
       <main className={cn("flex-1", showDetails ? "block" : "hidden md:block")}>
