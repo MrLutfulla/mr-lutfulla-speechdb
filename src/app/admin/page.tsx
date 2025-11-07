@@ -4,19 +4,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
-import { collectionGroup, getDocs, onSnapshot, query, collection, orderBy } from 'firebase/firestore';
-import { Loader2, User, Mic, ChevronRight, ChevronsUpDown } from 'lucide-react';
+import { collectionGroup, onSnapshot, query, collection, orderBy } from 'firebase/firestore';
+import { Loader2, Mic } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
 import { RecordingList } from '@/components/recording-list';
 import { RecordingDetails } from '@/components/recording-details';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
 
 function AdminPage() {
   const { user, loading: userLoading } = useUser();
@@ -48,7 +44,12 @@ function AdminPage() {
     const unsubscribeRecordings = onSnapshot(recordingsQuery, (snapshot) => {
       const recordingsMap = new Map<string, Recording[]>();
       snapshot.docs.forEach(doc => {
-        const recording = { ...doc.data(), id: doc.id } as Recording;
+        const data = doc.data();
+        const recording = { 
+            ...data, 
+            id: doc.id,
+            createdAt: data.createdAt.toDate().toISOString(),
+        } as Recording;
         const userId = doc.ref.parent.parent?.id;
         if (userId) {
           const userRecordings = recordingsMap.get(userId) || [];
@@ -116,7 +117,7 @@ function AdminPage() {
                         key={u.uid}
                         onClick={() => handleSelectUser(u.uid)}
                         className={cn(
-                            'w-full text-left p-3 rounded-md transition-colors flex items-center gap-3',
+                            'w-full text-left p-3 transition-colors flex items-center gap-3',
                             selectedUserId === u.uid ? 'bg-accent' : 'hover:bg-accent/50'
                         )}
                     >
@@ -183,3 +184,5 @@ function AdminPage() {
 }
 
 export default AdminPage;
+
+    
