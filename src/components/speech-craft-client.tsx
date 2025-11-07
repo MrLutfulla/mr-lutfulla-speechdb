@@ -5,7 +5,7 @@ import { Recording, StoredRecording, NewRecordingMetadata } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
-import { Download, PlusCircle } from "lucide-react";
+import { Download, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { NewRecording } from "@/components/new-recording";
 import JSZip from "jszip";
@@ -13,6 +13,18 @@ import WavEncoder from "wav-encoder";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 const LOCAL_STORAGE_KEY = "speechcraft-recordings";
 
@@ -39,16 +51,22 @@ const base64ToBlob = (base64: string): Blob => {
 };
 
 async function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
-  const audioContext = new AudioContext({ sampleRate: 48000 });
-  const arrayBuffer = await webmBlob.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  const wavBuffer = await WavEncoder.encode({
-    sampleRate: 48000,
-    channelData: Array.from({ length: audioBuffer.numberOfChannels }, (_, i) =>
-      audioBuffer.getChannelData(i)
-    ),
-  });
-  return new Blob([wavBuffer], { type: "audio/wav" });
+  try {
+    const audioContext = new AudioContext({ sampleRate: 48000 });
+    const arrayBuffer = await webmBlob.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const wavBuffer = await WavEncoder.encode({
+      sampleRate: 48000,
+      channelData: Array.from({ length: audioBuffer.numberOfChannels }, (_, i) =>
+        audioBuffer.getChannelData(i)
+      ),
+    });
+    return new Blob([wavBuffer], { type: "audio/wav" });
+  } catch (error) {
+    console.error("Failed to convert WebM to WAV:", error);
+    // Return an empty blob or re-throw the error, depending on desired handling
+    throw error;
+  }
 }
 
 /* ---------- Main Component ---------- */
@@ -118,9 +136,12 @@ export function SpeechCraftClient() {
       try {
         const toStore: StoredRecording[] = await Promise.all(
           list.map(async (rec) => {
+            // Re-create blob from URL to ensure it's fresh
             const response = await fetch(rec.audioUrl);
             const blob = await response.blob();
             const audioBase64 = await blobToBase64(blob);
+
+            // Destructure to remove the runtime-only audioUrl
             const { audioUrl, ...rest } = rec;
             return { ...rest, audioBase64 };
           })
@@ -138,6 +159,7 @@ export function SpeechCraftClient() {
     [toast, isClient]
   );
 
+
   /* --- Add Recording --- */
   const handleAddRecording = async (
     audioBlob: Blob,
@@ -146,7 +168,10 @@ export function SpeechCraftClient() {
     const nextIdNumber =
       recordings.length > 0
         ? Math.max(
-            ...recordings.map((r) => parseInt(r.speakerId.split("_")[1] || "0"))
+            ...recordings.map((r) => {
+                const parts = r.speakerId.split("_");
+                return parseInt(parts[1] || "0");
+            })
           ) + 1
         : 1;
 
@@ -214,8 +239,19 @@ export function SpeechCraftClient() {
     });
   };
 
+  const handleClearAll = async () => {
+    recordings.forEach(rec => URL.revokeObjectURL(rec.audioUrl));
+    setRecordings([]);
+    await updateLocalStorage([]);
+    handleClearSelection();
+    toast({
+      title: 'Barcha yozuvlar o‘chirildi',
+      description: 'Barcha saqlangan ma’lumotlar tozalandi.',
+    });
+  };
+
  /* --- Export All Recordings --- */
-  const handleExport = async () => {
+ const handleExport = async () => {
     if (recordings.length === 0) {
       toast({
         title: "Eksport uchun ma'lumot yo'q",
@@ -226,26 +262,36 @@ export function SpeechCraftClient() {
 
     toast({
       title: "Eksport qilinmoqda...",
-      description: "Yozuvlaringiz tayyorlanmoqda...",
+      description: "Yozuvlaringiz tayyorlanmoqda, iltimos kuting.",
     });
+
     try {
       const zip = new JSZip();
       const metadata: any[] = [];
-      
+
       for (const rec of recordings) {
+        // Sanitize the ID to create a valid filename
         const fileName = `${rec.id.replace(/[^a-zA-Z0-9_.-]/g, '_')}.wav`;
 
+        // Destructure to exclude the blob URL from the JSON metadata
         const { audioUrl, ...rest } = rec;
         metadata.push({ ...rest, fileName });
 
+        // Fetch the audio data from the blob URL
         const response = await fetch(audioUrl);
         const webmBlob = await response.blob();
+        
+        // Convert to WAV format
         const wavBlob = await convertWebmToWav(webmBlob);
+
+        // Add WAV file to the zip
         zip.file(fileName, wavBlob);
       }
 
+      // Add metadata.json file to the zip
       zip.file("metadata.json", JSON.stringify(metadata, null, 2));
 
+      // Generate the zip file and trigger download
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
@@ -258,13 +304,13 @@ export function SpeechCraftClient() {
 
       toast({
         title: "Eksport muvaffaqiyatli",
-        description: "ZIP fayl yuklab olindi.",
+        description: "Barcha yozuvlar va ma'lumotlar ZIP faylga saqlandi.",
       });
     } catch (err) {
       console.error("Export error:", err);
       toast({
         title: "Eksportda xatolik",
-        description: "Ma'lumotlarni eksport qilishda xatolik yuz berdi.",
+        description: "Ma'lumotlarni eksport qilishda kutilmagan xatolik yuz berdi.",
         variant: "destructive",
       });
     }
@@ -283,11 +329,32 @@ export function SpeechCraftClient() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <div className={cn("flex-col border-r bg-card w-full md:w-[350px] shrink-0", showList ? "flex" : "hidden md:flex")}>
+      <div className={cn("flex-col border-r bg-card w-full md:w-96 shrink-0", showList ? "flex" : "hidden md:flex")}>
         <div className="p-4 flex justify-between items-center border-b">
           <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
            <div className="flex items-center gap-2">
-            <Button onClick={handleExport} variant="outline" size="sm">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" disabled={recordings.length === 0}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Tozalash
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Haqiqatan ham oʻchirmoqchimisiz?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Bu amalni qaytarib boʻlmaydi. Bu barcha yozuvlarni brauzeringiz xotirasidan butunlay oʻchirib tashlaydi.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearAll} className="bg-destructive hover:bg-destructive/90">
+                    O'chirish
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button onClick={handleExport} variant="outline" size="sm" disabled={recordings.length === 0}>
               <Download className="mr-2 h-4 w-4" /> Eksport
             </Button>
           </div>
@@ -298,13 +365,13 @@ export function SpeechCraftClient() {
           onSelectRecording={handleSelectRecording}
         />
         <div className="p-4 border-t">
-          <Button onClick={handleShowNewRecording} size="lg" className="w-full">
+           <Button onClick={handleShowNewRecording} size="lg" className="w-full">
             <PlusCircle className="mr-2 h-4 w-4" /> Yangi yozuv
           </Button>
         </div>
       </div>
 
-      <main className={cn("flex-1", showDetails ? "block" : "hidden md:block")}>
+       <main className={cn("flex-1", showDetails ? "block" : "hidden md:block")}>
         <ScrollArea className="h-full">
          <div className="p-4 md:p-8">
             {view === 'new' && (
