@@ -117,6 +117,7 @@ interface MetadataFormProps {
 export function MetadataForm({
   recording,
   onSave,
+  isNewRecording,
 }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -179,42 +180,14 @@ export function MetadataForm({
         <Card>
           <CardHeader>
             <CardTitle>Matn (Context)</CardTitle>
-            <CardDescription>
-              Quyidagi matnni tanlangan emotsiyada o'qing.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <FormField
-              control={form.control}
-              name="textId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Matnni tanlang</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Matnni tanlang..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {texts.map((text) => (
-                        <SelectItem key={text.id} value={text.id}>
-                          {text.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {selectedText && (
+          <CardContent>
+            {selectedText ? (
               <div className="p-4 border-l-4 border-primary bg-primary/10">
                 <p className="font-mono text-lg">"{selectedText}"</p>
               </div>
+            ) : (
+               <p className="text-muted-foreground">Yozuv uchun matn topilmadi.</p>
             )}
           </CardContent>
         </Card>

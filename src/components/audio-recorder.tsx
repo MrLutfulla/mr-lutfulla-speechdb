@@ -31,6 +31,7 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
 
   const startTimer = useCallback(() => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    setTimer(0); // Reset timer before starting
     timerIntervalRef.current = setInterval(() => {
       setTimer((prev) => prev + 1);
     }, 1000);
@@ -53,7 +54,6 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
 
   const startRecording = async () => {
     setStatus('permission');
-    setTimer(0);
     setAudioBlob(null);
     chunksRef.current = [];
 
@@ -169,7 +169,7 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
           )}
         </div>
         <div className="text-3xl font-mono tabular-nums h-9 text-muted-foreground">
-          {(status !== 'idle' && status !== 'permission') && formatTime(timer)}
+          {(status === 'recording' || status === 'stopped') && formatTime(timer)}
         </div>
       </CardContent>
     </Card>
