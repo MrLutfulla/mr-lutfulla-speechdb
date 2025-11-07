@@ -29,20 +29,20 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
     }
   }, [stream]);
 
-  const startTimer = useCallback(() => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    setTimer(0); // Reset timer before starting
-    timerIntervalRef.current = setInterval(() => {
-      setTimer((prev) => prev + 1);
-    }, 1000);
-  }, []);
-
   const stopTimer = useCallback(() => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
   }, []);
+
+  const startTimer = useCallback(() => {
+    stopTimer(); // Clear any existing timer
+    setTimer(0);
+    timerIntervalRef.current = setInterval(() => {
+      setTimer((prev) => prev + 1);
+    }, 1000);
+  }, [stopTimer]);
 
 
   useEffect(() => {
