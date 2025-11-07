@@ -1,9 +1,9 @@
 // Replace this with your own Firebase configuration.
 export const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_API_KEY",
-  authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN",
-  projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-  storageBucket: "REPLACE_WITH_YOUR_STORAGE_BUCKET",
-  messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-  appId: "REPLACE_WITH_YOUR_APP_ID",
+  projectId: 'mrlutfulla-speechdb-6445-47985',
+  appId: '1:349485864781:web:b693f93be623223a7e0904',
+  apiKey: 'AIzaSyAR0OF3dOV6ObO12WpkP46-QFbe62Wim7Q',
+  authDomain: 'mrlutfulla-speechdb-6445-47985.firebaseapp.com',
+  measurementId: '',
+  messagingSenderId: '349485864781',
 };
