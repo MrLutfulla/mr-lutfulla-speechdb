@@ -5,11 +5,12 @@ import { Recording, StoredRecording, NewRecordingMetadata } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
-import { Download, PlusCircle } from "lucide-react";
+import { Download, PlusCircle, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { NewRecording } from "@/components/new-recording";
 import JSZip from "jszip";
 import WavEncoder from "wav-encoder";
+import { cn } from "@/lib/utils";
 
 const LOCAL_STORAGE_KEY = "speechcraft-recordings";
 
@@ -55,6 +56,7 @@ export function SpeechCraftClient() {
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
+  const [view, setView] = useState<'list' | 'details'>('list');
 
   /* --- Mount: Load from LocalStorage --- */
   useEffect(() => {
@@ -87,6 +89,29 @@ export function SpeechCraftClient() {
     };
   }, [recordings]);
 
+  /* --- View Management --- */
+  useEffect(() => {
+    if(selectedRecordingId !== null) {
+      setView('details');
+    }
+  }, [selectedRecordingId]);
+
+  const handleClearSelection = () => {
+    setSelectedRecordingId(null);
+    setView('list');
+  }
+
+  const handleSelectRecording = (id: string) => {
+    setSelectedRecordingId(id);
+    setView('details');
+  }
+
+  const handleShowNewRecording = () => {
+    setSelectedRecordingId(null);
+    setView('details');
+  }
+
+
   /* --- Save to LocalStorage --- */
   const updateLocalStorage = useCallback(
     async (list: Recording[]) => {
@@ -118,7 +143,8 @@ export function SpeechCraftClient() {
     audioBlob: Blob,
     metadata: NewRecordingMetadata
   ) => {
-    const nextId = recordings.length + 1;
+    const nextId = recordings.length > 0 ? Math.max(...recordings.map(r => parseInt(r.speakerId.split('_')[1] || '0'))) + 1 : 1;
+
     const speakerId = `UZ_${String(nextId).padStart(2, '0')}`;
     const textId = 'text_new';
 
@@ -149,6 +175,7 @@ export function SpeechCraftClient() {
     await updateLocalStorage(updated);
 
     setSelectedRecordingId(newRecording.id);
+    setView('details');
     toast({ title: "Recording Saved", description: "Your new recording has been added." });
   };
 
@@ -169,7 +196,7 @@ export function SpeechCraftClient() {
     setRecordings(updated);
     await updateLocalStorage(updated);
 
-    if (selectedRecordingId === id) setSelectedRecordingId(null);
+    if (selectedRecordingId === id) handleClearSelection();
     toast({ title: "Recording Deleted", description: "The recording has been removed." });
   };
 
@@ -240,10 +267,8 @@ export function SpeechCraftClient() {
 
   if (!isClient) return <div className="w-full h-full bg-background" />;
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
-      {/* Sidebar */}
-      <div className="flex flex-col border-r bg-card h-full">
+  const Sidebar = () => (
+     <div className="flex flex-col border-r bg-card h-full">
         {/* Header */}
         <div className="p-4 border-b flex justify-between items-center gap-2">
           <h2 className="text-lg font-headline font-semibold">Recordings</h2>
@@ -257,31 +282,48 @@ export function SpeechCraftClient() {
           <RecordingList
             recordings={recordings}
             selectedRecordingId={selectedRecordingId}
-            onSelectRecording={setSelectedRecordingId}
+            onSelectRecording={handleSelectRecording}
           />
         </div>
         
         {/* Footer with New Button */}
-        <div className="p-4 border-t flex">
-           <Button onClick={() => setSelectedRecordingId(null)} size="lg" className="w-full">
+        <div className="p-4 border-t flex justify-start">
+           <Button onClick={handleShowNewRecording} size="lg" className="w-full">
               <PlusCircle className="mr-2 h-4 w-4" /> New Recording
             </Button>
         </div>
       </div>
+  );
 
-      {/* Main Panel */}
-      <div className="p-4 md:p-8 overflow-y-auto h-full">
+  const MainPanel = () => (
+     <div className="p-4 md:p-8 overflow-y-auto h-full">
         {selectedRecording ? (
           <RecordingDetails
             key={selectedRecording.id}
             recording={selectedRecording}
             onUpdateRecording={handleUpdateRecording}
             onDeleteRecording={handleDeleteRecording}
-            onClearSelection={() => setSelectedRecordingId(null)}
+            onClearSelection={handleClearSelection}
           />
         ) : (
-          <NewRecording onSaveRecording={handleAddRecording} />
+          <NewRecording onSaveRecording={handleAddRecording} onBack={handleClearSelection} />
         )}
+      </div>
+  )
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
+      {/* Mobile View */}
+      <div className="md:hidden h-full">
+        {view === 'list' ? <Sidebar /> : <MainPanel />}
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden md:block h-full">
+         <Sidebar />
+      </div>
+       <div className="hidden md:block h-full">
+         <MainPanel />
       </div>
     </div>
   );

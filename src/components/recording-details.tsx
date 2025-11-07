@@ -4,7 +4,7 @@ import { Recording } from '@/lib/types';
 import { AudioPlayer } from './audio-player';
 import { MetadataForm } from './metadata-form';
 import { Button } from '@/components/ui/button';
-import { Trash2, X } from 'lucide-react';
+import { Trash2, ArrowLeft } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,19 +34,21 @@ export function RecordingDetails({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start gap-4">
-        <div>
-          <h2 className="text-3xl font-headline font-bold">
-            {recording.speakerId || 'No ID'}
-          </h2>
-          <p className="text-muted-foreground">
-            Recorded on {new Date(recording.createdAt).toLocaleString()}
-          </p>
+        <div className='flex items-center gap-4'>
+           <Button variant="ghost" size="icon" onClick={onClearSelection} className="md:hidden">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="sr-only">Go back to list</span>
+            </Button>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-headline font-bold">
+              {recording.speakerId || 'No ID'}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Recorded on {new Date(recording.createdAt).toLocaleString()}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="ghost" size="icon" onClick={onClearSelection}>
-              <X className="h-5 w-5" />
-              <span className="sr-only">Go back to new recording</span>
-            </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="icon">
@@ -81,7 +83,6 @@ export function RecordingDetails({
         recording={recording} 
         onSave={onUpdateRecording}
         isNewRecording={false}
-        onRecord={() => {}}
        />
     </div>
   );

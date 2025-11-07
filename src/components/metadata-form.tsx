@@ -150,6 +150,7 @@ export function MetadataForm({
       ...recording,
       ...values,
     });
+    form.reset(values);
   }
 
   const selectedText = texts.find((t) => t.id === form.watch('textId'))?.label;
