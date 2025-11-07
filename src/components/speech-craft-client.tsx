@@ -60,11 +60,11 @@ export function SpeechCraftClient() {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
   const [view, setView] = useState<'list' | 'new' | 'details'>('list');
+  
   const isMobile = useMemo(() => {
       if (typeof window === 'undefined') return false;
       return window.innerWidth < 768;
   }, [isClient]);
-
 
   /* --- Mount: Load from LocalStorage --- */
   useEffect(() => {
@@ -88,7 +88,7 @@ export function SpeechCraftClient() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, []);
 
   /* --- Unmount: Cleanup object URLs --- */
   useEffect(() => {
@@ -153,7 +153,6 @@ export function SpeechCraftClient() {
 
     const speakerId = `UZ_${String(nextIdNumber).padStart(2, "0")}`;
     const textId = "text_new";
-
     const id = `${speakerId}_${textId}_${metadata.emotion}_${Date.now()}`;
 
     const newRecording: Recording = {
@@ -162,9 +161,9 @@ export function SpeechCraftClient() {
       textId,
       emotion: metadata.emotion,
       intensity: "normal",
-      gender: "male", // Default, can be changed in details
-      age: "18-25", // Default
-      region: "toshkent", // Default
+      gender: "male",
+      age: "18-25",
+      region: "toshkent",
       personality: {
         extrovert: false,
         introvert: false,
@@ -208,7 +207,7 @@ export function SpeechCraftClient() {
 
     const updated = recordings.filter((r) => r.id !== id);
     setRecordings(updated);
-await updateLocalStorage(updated);
+    await updateLocalStorage(updated);
 
     if (selectedRecordingId === id) handleClearSelection();
     toast({
@@ -217,7 +216,7 @@ await updateLocalStorage(updated);
     });
   };
 
-  /* --- Export All Recordings --- */
+ /* --- Export All Recordings --- */
   const handleExport = async () => {
     if (recordings.length === 0) {
       toast({
@@ -234,27 +233,13 @@ await updateLocalStorage(updated);
     try {
       const zip = new JSZip();
       const metadata: any[] = [];
-      const usedFileNames = new Set<string>();
-
+      
       for (const rec of recordings) {
-        const baseSpeakerIdMatch = rec.speakerId.match(/^UZ_\d+/);
-        const baseSpeakerId = baseSpeakerIdMatch
-          ? baseSpeakerIdMatch[0]
-          : rec.speakerId;
+        // Create a clean, unique filename from the recording ID
+        const fileName = `${rec.id.replace(/[^a-zA-Z0-9_.-]/g, '_')}.wav`;
 
-        let baseName = `${baseSpeakerId}_${rec.textId}_${rec.emotion}_${rec.intensity}`;
-        let fileName = `${baseName}.wav`;
-        let counter = 1;
-
-        while (usedFileNames.has(fileName)) {
-          fileName = `${baseName}_(${counter}).wav`;
-          counter++;
-        }
-        usedFileNames.add(fileName);
-
-        const { audioUrl, id, ...rest } = rec;
-
-        metadata.push({ ...rest, id, fileName });
+        const { audioUrl, ...rest } = rec;
+        metadata.push({ ...rest, fileName });
 
         const response = await fetch(audioUrl);
         const webmBlob = await response.blob();
@@ -268,10 +253,10 @@ await updateLocalStorage(updated);
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `speechcraft-export-${
-        new Date().toISOString().split("T")[0]
-      }.zip`;
+      a.download = `speechcraft-export-${new Date().toISOString().split("T")[0]}.zip`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       toast({
@@ -287,6 +272,7 @@ await updateLocalStorage(updated);
       });
     }
   };
+
 
   const selectedRecording = useMemo(
     () => recordings.find((r) => r.id === selectedRecordingId),
@@ -304,9 +290,6 @@ await updateLocalStorage(updated);
         <div className="p-4 flex justify-between items-center border-b">
           <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
            <div className="flex items-center gap-2">
-            <Button onClick={handleShowNewRecording} variant="outline" size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> Yangi
-            </Button>
             <Button onClick={handleExport} variant="outline" size="sm">
               <Download className="mr-2 h-4 w-4" /> Eksport
             </Button>
@@ -317,6 +300,11 @@ await updateLocalStorage(updated);
           selectedRecordingId={selectedRecordingId}
           onSelectRecording={handleSelectRecording}
         />
+        <div className="p-4 border-t">
+          <Button onClick={handleShowNewRecording} size="lg" className="w-full">
+            <PlusCircle className="mr-2 h-4 w-4" /> Yangi yozuv
+          </Button>
+        </div>
       </div>
 
       <main className={cn("flex-1", showDetails ? "block" : "hidden md:block")}>
