@@ -57,7 +57,7 @@ const texts = [
     { id: 'sentence_10', label: 'Ba’zan kichik bir so‘z ham odamning kayfiyatini o‘zgartiradi.' },
 ];
 
-const ageRanges = ['18-25', '26-35', '36-45', '46-55', '56+'];
+const ageRanges = ['18 yoshgacha', '18-25', '26-35', '36-45', '46-55', '56+'];
 
 const regions = [
   'Toshkent',
@@ -172,7 +172,7 @@ export function MetadataForm({
     form.reset(values);
   }
 
-  const selectedText = texts.find((t) => t.id === form.watch('textId'))?.label;
+  const selectedText = texts.find((t) => t.id === recording.textId)?.label;
 
   return (
     <Form {...form}>

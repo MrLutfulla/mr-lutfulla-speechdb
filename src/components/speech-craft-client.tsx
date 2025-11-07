@@ -185,7 +185,7 @@ export function SpeechCraftClient() {
       emotion: metadata.emotion,
       intensity: "normal",
       gender: "male",
-      age: "18-25",
+      age: "18 yoshgacha",
       region: "toshkent",
       personality: {
         extrovert: false,
