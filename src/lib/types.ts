@@ -1,11 +1,14 @@
 'use client';
 
 export interface PersonalityTraits {
-  openness: boolean;
-  conscientiousness: boolean;
-  extraversion: boolean;
-  agreeableness: boolean;
-  neuroticism: boolean;
+  extrovert: boolean;
+  introvert: boolean;
+  optimistic: boolean;
+  emotional: boolean;
+  calm: boolean;
+  analytical: boolean;
+  leader: boolean;
+  compassionate: boolean;
 }
 
 export interface Recording {

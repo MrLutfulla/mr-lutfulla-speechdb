@@ -5,12 +5,21 @@ import { Recording, StoredRecording, NewRecordingMetadata } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
-import { Download, PlusCircle, ArrowLeft } from "lucide-react";
+import { Download, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { NewRecording } from "@/components/new-recording";
 import JSZip from "jszip";
 import WavEncoder from "wav-encoder";
 import { cn } from "@/lib/utils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 const LOCAL_STORAGE_KEY = "speechcraft-recordings";
 
@@ -56,7 +65,8 @@ export function SpeechCraftClient() {
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
-  const [view, setView] = useState<'list' | 'details'>('list');
+  const { isMobile } = useSidebar();
+  const [view, setView] = useState<'list' | 'new' | 'details'>('list');
 
   /* --- Mount: Load from LocalStorage --- */
   useEffect(() => {
@@ -75,12 +85,12 @@ export function SpeechCraftClient() {
     } catch (err) {
       console.error("Failed to load recordings:", err);
       toast({
-        title: "Error",
-        description: "Could not load recordings from your browser storage.",
+        title: "Xatolik",
+        description: "Yozuvlarni brauzer xotirasidan yuklab bo'lmadi.",
         variant: "destructive",
       });
     }
-  }, []);
+  }, [toast]);
 
   /* --- Unmount: Cleanup object URLs --- */
   useEffect(() => {
@@ -90,26 +100,29 @@ export function SpeechCraftClient() {
   }, [recordings]);
 
   /* --- View Management --- */
-  useEffect(() => {
-    if(selectedRecordingId !== null) {
-      setView('details');
-    }
-  }, [selectedRecordingId]);
-
   const handleClearSelection = () => {
     setSelectedRecordingId(null);
     setView('list');
-  }
+  };
 
   const handleSelectRecording = (id: string) => {
     setSelectedRecordingId(id);
     setView('details');
-  }
+  };
 
   const handleShowNewRecording = () => {
     setSelectedRecordingId(null);
-    setView('details');
-  }
+    setView('new');
+  };
+
+  useEffect(() => {
+    if (isMobile) {
+      // On mobile, view determines what is shown
+    } else {
+      // On desktop, always show list, details are based on selection
+      setView('list');
+    }
+  }, [isMobile]);
 
 
   /* --- Save to LocalStorage --- */
@@ -129,8 +142,8 @@ export function SpeechCraftClient() {
       } catch (err) {
         console.error("Failed to save:", err);
         toast({
-          title: "Error",
-          description: "Could not save recordings to your browser storage.",
+          title: "Xatolik",
+          description: "Yozuvlarni brauzer xotirasiga saqlab bo'lmadi.",
           variant: "destructive",
         });
       }
@@ -156,15 +169,18 @@ export function SpeechCraftClient() {
       textId,
       emotion: metadata.emotion,
       intensity: 'normal',
-      gender: 'male',
-      age: '18-25',
-      region: 'toshkent',
+      gender: 'male', // Default, can be changed in details
+      age: '18-25', // Default
+      region: 'toshkent', // Default
       personality: {
-        openness: false,
-        conscientiousness: false,
-        extraversion: false,
-        agreeableness: false,
-        neuroticism: false,
+        extrovert: false,
+        introvert: false,
+        optimistic: false,
+        emotional: false,
+        calm: false,
+        analytical: false,
+        leader: false,
+        compassionate: false,
       },
       audioUrl: URL.createObjectURL(audioBlob),
       createdAt: new Date().toISOString(),
@@ -176,7 +192,7 @@ export function SpeechCraftClient() {
 
     setSelectedRecordingId(newRecording.id);
     setView('details');
-    toast({ title: "Recording Saved", description: "Your new recording has been added." });
+    toast({ title: "Yozuv saqlandi", description: "Yangi yozuvingiz qo'shildi." });
   };
 
   /* --- Update Recording Metadata --- */
@@ -184,7 +200,7 @@ export function SpeechCraftClient() {
     const updated = recordings.map((r) => (r.id === updatedRecording.id ? updatedRecording : r));
     setRecordings(updated);
     await updateLocalStorage(updated);
-    toast({ title: "Metadata Updated", description: "Your changes have been saved." });
+    toast({ title: "Ma'lumotlar yangilandi", description: "O'zgarishlaringiz saqlandi." });
   };
 
   /* --- Delete Recording --- */
@@ -197,17 +213,17 @@ export function SpeechCraftClient() {
     await updateLocalStorage(updated);
 
     if (selectedRecordingId === id) handleClearSelection();
-    toast({ title: "Recording Deleted", description: "The recording has been removed." });
+    toast({ title: "Yozuv o'chirildi", description: "Tanlangan yozuv o'chirildi." });
   };
 
   /* --- Export All Recordings --- */
   const handleExport = async () => {
     if (recordings.length === 0) {
-      toast({ title: "Nothing to Export", description: "No recordings to export." });
+      toast({ title: "Eksport uchun ma'lumot yo'q", description: "Hech qanday yozuv mavjud emas." });
       return;
     }
 
-    toast({ title: "Exporting...", description: "Preparing your recordings..." });
+    toast({ title: "Eksport qilinmoqda...", description: "Yozuvlaringiz tayyorlanmoqda..." });
     try {
       const zip = new JSZip();
       const metadata: any[] = [];
@@ -249,12 +265,12 @@ export function SpeechCraftClient() {
       a.click();
       URL.revokeObjectURL(url);
 
-      toast({ title: "Export Successful", description: "ZIP file downloaded." });
+      toast({ title: "Eksport muvaffaqiyatli", description: "ZIP fayl yuklab olindi." });
     } catch (err) {
       console.error("Export error:", err);
       toast({
-        title: "Export Failed",
-        description: "An error occurred while exporting your data.",
+        title: "Eksportda xatolik",
+        description: "Ma'lumotlarni eksport qilishda xatolik yuz berdi.",
         variant: "destructive",
       });
     }
@@ -267,37 +283,10 @@ export function SpeechCraftClient() {
 
   if (!isClient) return <div className="w-full h-full bg-background" />;
 
-  const Sidebar = () => (
-     <div className="flex flex-col border-r bg-card h-full">
-        {/* Header */}
-        <div className="p-4 border-b flex justify-between items-center gap-2">
-          <h2 className="text-lg font-headline font-semibold">Recordings</h2>
-          <Button onClick={handleExport} variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" /> Export
-          </Button>
-        </div>
-
-        {/* Recording List */}
-        <div className="flex-1 overflow-y-auto">
-          <RecordingList
-            recordings={recordings}
-            selectedRecordingId={selectedRecordingId}
-            onSelectRecording={handleSelectRecording}
-          />
-        </div>
-        
-        {/* Footer with New Button */}
-        <div className="p-4 border-t flex justify-start">
-           <Button onClick={handleShowNewRecording} size="lg" className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" /> New Recording
-            </Button>
-        </div>
-      </div>
-  );
-
-  const MainPanel = () => (
-     <div className="p-4 md:p-8 overflow-y-auto h-full">
-        {selectedRecording ? (
+  const renderMainContent = () => {
+    if (isMobile) {
+      if (view === 'details' && selectedRecording) {
+        return (
           <RecordingDetails
             key={selectedRecording.id}
             recording={selectedRecording}
@@ -305,26 +294,75 @@ export function SpeechCraftClient() {
             onDeleteRecording={handleDeleteRecording}
             onClearSelection={handleClearSelection}
           />
-        ) : (
-          <NewRecording onSaveRecording={handleAddRecording} onBack={handleClearSelection} />
-        )}
-      </div>
-  )
+        );
+      }
+      if (view === 'new') {
+        return <NewRecording onSaveRecording={handleAddRecording} onBack={handleClearSelection} />;
+      }
+      return null; // List is in the sidebar
+    }
+
+    // Desktop view
+    if (selectedRecording) {
+      return (
+        <RecordingDetails
+          key={selectedRecording.id}
+          recording={selectedRecording}
+          onUpdateRecording={handleUpdateRecording}
+          onDeleteRecording={handleDeleteRecording}
+          onClearSelection={handleClearSelection}
+        />
+      );
+    }
+    if (view === 'new') {
+      return <NewRecording onSaveRecording={handleAddRecording} onBack={handleClearSelection} />;
+    }
+    
+    // Placeholder when nothing is selected on desktop
+    return (
+       <div className="hidden md:flex h-full flex-col items-center justify-center bg-background text-muted-foreground p-8">
+            <h2 className="text-xl font-medium">Yozuvni tanlang</h2>
+            <p>Ko'rish yoki tahrirlash uchun ro'yxatdan yozuvni tanlang.</p>
+            <span className="text-sm mt-4">yoki</span>
+            <Button onClick={handleShowNewRecording} variant="ghost" className="mt-2">
+              <PlusCircle className="mr-2 h-4 w-4" /> Yangi yozuv yarating
+            </Button>
+        </div>
+    );
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] h-full">
-      {/* Mobile View */}
-      <div className="md:hidden h-full">
-        {view === 'list' ? <Sidebar /> : <MainPanel />}
-      </div>
-
-      {/* Desktop View */}
-      <div className="hidden md:block h-full">
-         <Sidebar />
-      </div>
-       <div className="hidden md:block h-full">
-         <MainPanel />
-      </div>
+    <div className="h-full">
+      <Sidebar collapsible="icon" variant="sidebar">
+        <SidebarHeader>
+          <div className="p-2 flex justify-between items-center">
+            <h2 className="text-lg font-headline font-semibold">Yozuvlar</h2>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleExport} variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" /> Eksport
+              </Button>
+              <SidebarTrigger className="md:hidden" />
+            </div>
+          </div>
+        </SidebarHeader>
+        <SidebarContent className="p-0">
+          <RecordingList
+            recordings={recordings}
+            selectedRecordingId={selectedRecordingId}
+            onSelectRecording={handleSelectRecording}
+          />
+        </SidebarContent>
+        <SidebarFooter>
+          <div className="p-4 border-t">
+            <Button onClick={handleShowNewRecording} size="lg" className="w-full">
+              <PlusCircle className="mr-2 h-4 w-4" /> Yangi yozuv
+            </Button>
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset className={cn("p-4 md:p-8 transition-all", isMobile && (view === 'list') && 'hidden')}>
+        {renderMainContent()}
+      </SidebarInset>
     </div>
   );
 }

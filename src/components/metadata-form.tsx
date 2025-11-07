@@ -69,16 +69,19 @@ const regions = [
   'Qoraqalpog‘iston',
 ];
 
-const personalityTraits: { id: keyof PersonalityTraits; label: string }[] = [
-  { id: 'openness', label: 'Ochiqlik (Openness)' },
-  { id: 'conscientiousness', label: 'Vijdonlilik (Conscientiousness)' },
-  { id: 'extraversion', label: 'Ekstraversiya (Extraversion)' },
-  { id: 'agreeableness', label: 'Yoqimlilik (Agreeableness)' },
-  { id: 'neuroticism', label: 'Nevrotizm (Neuroticism)' },
+const personalityTraits: { id: keyof PersonalityTraits; label: string, description: string }[] = [
+    { id: 'extrovert', label: 'Ekstravert', description: 'faol, ochiqko‘ngil, jamoada bo‘lishni yoqtiradi' },
+    { id: 'introvert', label: 'Introvert', description: 'tinchlikni yoqtiradi, kamgap' },
+    { id: 'optimistic', label: 'Ijobiy fikrlaydigan', description: 'optimistik, quvnoq' },
+    { id: 'emotional', label: 'Emotsional', description: 'tez hayajonlanadigan, hissiyotli' },
+    { id: 'calm', label: 'Tinch va osoyishta', description: 'xotirjam, barqaror' },
+    { id: 'analytical', label: 'Analitik', description: 'mantiqan o‘ylaydigan, kuzatuvchan' },
+    { id: 'leader', label: 'Yetakchi', description: 'faol, boshqalarni boshqarishni yoqtiradi' },
+    { id: 'compassionate', label: 'Rahmdil', description: 'boshqalarga yordam berishni yoqtiradi' },
 ];
 
 const formSchema = z.object({
-  speakerId: z.string().min(1, 'Speaker ID is required.'),
+  speakerId: z.string().min(1, 'Ishtirokchi ID kiritilishi shart.'),
   gender: z.enum(['male', 'female'], { required_error: 'Jinsini tanlang' }),
   age: z.string({ required_error: 'Yoshni tanlang' }),
   region: z.string({ required_error: 'Hududni tanlang' }),
@@ -86,11 +89,14 @@ const formSchema = z.object({
   intensity: z.enum(['normal', 'strong']),
   textId: z.string({ required_error: 'Matnni tanlang' }),
   personality: z.object({
-    openness: z.boolean().default(false),
-    conscientiousness: z.boolean().default(false),
-    extraversion: z.boolean().default(false),
-    agreeableness: z.boolean().default(false),
-    neuroticism: z.boolean().default(false),
+    extrovert: z.boolean().default(false),
+    introvert: z.boolean().default(false),
+    optimistic: z.boolean().default(false),
+    emotional: z.boolean().default(false),
+    calm: z.boolean().default(false),
+    analytical: z.boolean().default(false),
+    leader: z.boolean().default(false),
+    compassionate: z.boolean().default(false),
   }),
 });
 
@@ -117,11 +123,14 @@ export function MetadataForm({
       intensity: recording.intensity || 'normal',
       textId: recording.textId || 'text1',
       personality: recording.personality || {
-        openness: false,
-        conscientiousness: false,
-        extraversion: false,
-        agreeableness: false,
-        neuroticism: false,
+        extrovert: false,
+        introvert: false,
+        optimistic: false,
+        emotional: false,
+        calm: false,
+        analytical: false,
+        leader: false,
+        compassionate: false,
       },
     },
   });
@@ -136,11 +145,14 @@ export function MetadataForm({
       intensity: recording.intensity || 'normal',
       textId: recording.textId || 'text1',
       personality: recording.personality || {
-        openness: false,
-        conscientiousness: false,
-        extraversion: false,
-        agreeableness: false,
-        neuroticism: false,
+        extrovert: false,
+        introvert: false,
+        optimistic: false,
+        emotional: false,
+        calm: false,
+        analytical: false,
+        leader: false,
+        compassionate: false,
       },
     });
   }, [recording, form]);
@@ -381,7 +393,7 @@ export function MetadataForm({
           <CardHeader>
             <CardTitle>Shaxsiyat xususiyatlari (Personality Traits)</CardTitle>
             <CardDescription>
-              Ishtirokchiga tegishli deb hisoblagan xususiyatlarni belgilang.
+              Iltimos, o‘zingizga eng yaqin deb hisoblagan xususiyatlarni belgilang.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -400,6 +412,7 @@ export function MetadataForm({
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>{item.label}</FormLabel>
+                      <FormDescription>{item.description}</FormDescription>
                     </div>
                   </FormItem>
                 )}
