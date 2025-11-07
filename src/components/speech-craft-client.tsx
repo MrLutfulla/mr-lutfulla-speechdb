@@ -187,12 +187,16 @@ export function SpeechCraftClient() {
       const usedFileNames = new Set<string>();
 
       for (const rec of recordings) {
-        let baseName = `${rec.speakerId}_${rec.textId}_${rec.emotion}_${rec.intensity}`;
+        // Extract the base speaker ID like "UZ_01" from a potentially longer string
+        const baseSpeakerId = rec.speakerId.split('_')[0] + '_' + rec.speakerId.split('_')[1];
+        
+        let baseName = `${baseSpeakerId}_${rec.textId}_${rec.emotion}_${rec.intensity}`;
         let fileName = `${baseName}.wav`;
         let counter = 1;
         
+        // Ensure the filename is unique
         while (usedFileNames.has(fileName)) {
-          fileName = `${baseName}_${counter}.wav`;
+          fileName = `${baseName}_(${counter}).wav`;
           counter++;
         }
         usedFileNames.add(fileName);
