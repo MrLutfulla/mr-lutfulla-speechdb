@@ -27,6 +27,7 @@ export interface Recording {
 
 export type NewRecordingMetadata = {
   emotion: string;
+  textId: string;
 };
 
 export interface StoredRecording {

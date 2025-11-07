@@ -12,6 +12,7 @@ import JSZip from "jszip";
 import WavEncoder from "wav-encoder";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const LOCAL_STORAGE_KEY = "speechcraft-recordings";
 
@@ -61,10 +62,7 @@ export function SpeechCraftClient() {
   const { toast } = useToast();
   const [view, setView] = useState<'list' | 'new' | 'details'>('list');
   
-  const isMobile = useMemo(() => {
-      if (typeof window === 'undefined') return false;
-      return window.innerWidth < 768;
-  }, [isClient]);
+  const isMobile = useIsMobile();
 
   /* --- Mount: Load from LocalStorage --- */
   useEffect(() => {
@@ -88,7 +86,7 @@ export function SpeechCraftClient() {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [toast]);
 
   /* --- Unmount: Cleanup object URLs --- */
   useEffect(() => {
@@ -116,6 +114,7 @@ export function SpeechCraftClient() {
   /* --- Save to LocalStorage --- */
   const updateLocalStorage = useCallback(
     async (list: Recording[]) => {
+      if (!isClient) return;
       try {
         const toStore: StoredRecording[] = await Promise.all(
           list.map(async (rec) => {
@@ -136,7 +135,7 @@ export function SpeechCraftClient() {
         });
       }
     },
-    [toast]
+    [toast, isClient]
   );
 
   /* --- Add Recording --- */
@@ -152,13 +151,12 @@ export function SpeechCraftClient() {
         : 1;
 
     const speakerId = `UZ_${String(nextIdNumber).padStart(2, "0")}`;
-    const textId = "text_new";
-    const id = `${speakerId}_${textId}_${metadata.emotion}_${Date.now()}`;
+    const id = `${speakerId}_${metadata.textId}_${metadata.emotion}_${Date.now()}`;
 
     const newRecording: Recording = {
       id,
       speakerId,
-      textId,
+      textId: metadata.textId,
       emotion: metadata.emotion,
       intensity: "normal",
       gender: "male",
@@ -235,7 +233,6 @@ export function SpeechCraftClient() {
       const metadata: any[] = [];
       
       for (const rec of recordings) {
-        // Create a clean, unique filename from the recording ID
         const fileName = `${rec.id.replace(/[^a-zA-Z0-9_.-]/g, '_')}.wav`;
 
         const { audioUrl, ...rest } = rec;
@@ -285,8 +282,8 @@ export function SpeechCraftClient() {
   const showDetails = !isMobile || (isMobile && (view === 'details' || view === 'new'));
 
   return (
-    <div className="flex h-full">
-      <div className={cn("flex flex-col border-r bg-card w-[350px] shrink-0", showList ? "flex" : "hidden md:flex")}>
+    <div className="flex h-full overflow-hidden">
+      <div className={cn("flex-col border-r bg-card w-full md:w-[350px] shrink-0", showList ? "flex" : "hidden md:flex")}>
         <div className="p-4 flex justify-between items-center border-b">
           <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
            <div className="flex items-center gap-2">

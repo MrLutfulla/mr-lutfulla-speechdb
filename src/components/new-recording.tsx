@@ -2,26 +2,38 @@
 
 import { useState } from 'react';
 import { AudioRecorder } from './audio-recorder';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { NewRecordingMetadata } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 const emotions = [
-  { id: 'neutral', label: 'Neutral' },
-  { id: 'calm', label: 'Calm' },
-  { id: 'happy', label: 'Happy' },
-  { id: 'sad', label: 'Sad' },
-  { id: 'angry', label: 'Angry' },
-  { id: 'fearful', label: 'Fearful' },
-  { id: 'disgust', label: 'Disgust' },
-  { id: 'surprised', label: 'Surprised' },
+  { id: 'neutral', label: 'Neytral' },
+  { id: 'calm', label: 'Tinch' },
+  { id: 'happy', label: 'Xursand' },
+  { id: 'sad', label: 'Xafa' },
+  { id: 'angry', label: 'Jahldor' },
+  { id: 'fearful', label: 'Qo‘rquv' },
+  { id: 'disgust', label: 'Jirkanish' },
+  { id: 'surprised', label: 'Hayrat' },
 ];
 
-const textToRead = "Men bu narsani kutmagan edim, lekin baribir hammasi yaxshi bo‘ldi.";
+const texts = [
+    { id: 'sentence_1', label: 'Men bu narsani kutmagan edim, lekin baribir hammasi yaxshi bo‘ldi.' },
+    { id: 'sentence_2', label: 'Kecha bo‘lgan voqeani hali ham esdan chiqara olmayapman.' },
+    { id: 'sentence_3', label: 'Bu natijani ko‘rganimda o‘zimga ishonmadim.' },
+    { id: 'sentence_4', label: 'Bu odamning gaplari meni chuqur o‘ylantirib qo‘ydi.' },
+    { id: 'sentence_5', label: 'Shunaqa holatni hayotimda birinchi marta ko‘ryapman.' },
+    { id: 'sentence_6', label: 'U meni oldindan ogohlantirganda, hammasi boshqacha bo‘lardi.' },
+    { id: 'sentence_7', label: 'Men bu ishni uddalayman deb o‘ylamagan edim, lekin harakat qildim.' },
+    { id: 'sentence_8', label: 'Bir qarashda oddiy tuyulgan narsa aslida juda muhim ekan.' },
+    { id: 'sentence_9', label: 'Bunday natijani hech kim kutmagandi, lekin u yuz berdi.' },
+    { id: 'sentence_10', label: 'Ba’zan kichik bir so‘z ham odamning kayfiyatini o‘zgartiradi.' },
+];
 
 interface NewRecordingProps {
   onSaveRecording: (blob: Blob, metadata: NewRecordingMetadata) => void;
@@ -30,10 +42,13 @@ interface NewRecordingProps {
 
 export function NewRecording({ onSaveRecording, onBack }: NewRecordingProps) {
   const [selectedEmotion, setSelectedEmotion] = useState('neutral');
+  const [selectedTextId, setSelectedTextId] = useState('sentence_1');
 
   const handleRecord = (blob: Blob) => {
-    onSaveRecording(blob, { emotion: selectedEmotion });
+    onSaveRecording(blob, { emotion: selectedEmotion, textId: selectedTextId });
   };
+
+  const selectedText = texts.find(t => t.id === selectedTextId)?.label;
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-0 md:p-8">
@@ -41,19 +56,34 @@ export function NewRecording({ onSaveRecording, onBack }: NewRecordingProps) {
         <div className="flex items-center gap-4 md:hidden mb-4">
            <Button variant="ghost" size="icon" onClick={onBack}>
               <ArrowLeft className="h-5 w-5" />
-              <span className="sr-only">Go back to list</span>
+              <span className="sr-only">Ro'yxatga qaytish</span>
             </Button>
-            <h2 className='text-2xl font-headline font-bold'>New Recording</h2>
+            <h2 className='text-2xl font-headline font-bold'>Yangi Yozuv</h2>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Gap matni</CardTitle>
+            <CardTitle>✅ Gap matni</CardTitle>
+            <CardDescription>O‘qish uchun matnni tanlang</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-lg md:text-xl font-mono p-4 border-l-4 border-primary bg-primary/10 rounded-r-md">
-              "{textToRead}"
-            </p>
+          <CardContent className="space-y-4">
+            <Select onValueChange={setSelectedTextId} defaultValue={selectedTextId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Matnni tanlang..." />
+              </SelectTrigger>
+              <SelectContent>
+                {texts.map((text) => (
+                  <SelectItem key={text.id} value={text.id}>
+                    {text.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedText && (
+              <p className="text-lg md:text-xl font-mono p-4 border-l-4 border-primary bg-primary/10 rounded-r-md text-left">
+                "{selectedText}"
+              </p>
+            )}
           </CardContent>
         </Card>
 

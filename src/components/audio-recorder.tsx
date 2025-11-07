@@ -29,18 +29,33 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
     }
   }, [stream]);
 
+  const startTimer = useCallback(() => {
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = setInterval(() => {
+      setTimer((prev) => prev + 1);
+    }, 1000);
+  }, []);
+
+  const stopTimer = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  }, []);
+
+
   useEffect(() => {
     return () => {
       stopStream();
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
+      stopTimer();
     };
-  }, [stopStream]);
+  }, [stopStream, stopTimer]);
 
   const startRecording = async () => {
     setStatus('permission');
     setTimer(0);
+    setAudioBlob(null);
+    chunksRef.current = [];
 
     let mediaStream: MediaStream;
     try {
@@ -55,40 +70,37 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
       console.error('Error accessing microphone:', err);
       setStatus('error');
       toast({
-        title: 'Microphone Error',
-        description: 'Could not access your microphone. Please check your browser permissions.',
+        title: 'Mikrofon bilan xatolik',
+        description: 'Mikrofonga kirish imkoni yo‘q. Iltimos, brauzer ruxsatlarini tekshiring.',
         variant: 'destructive',
       });
       return;
     }
     
     setStatus('recording');
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    timerIntervalRef.current = setInterval(() => {
-      setTimer((prev) => prev + 1);
-    }, 1000);
+    startTimer();
 
     const options = {
       mimeType: 'audio/webm;codecs=opus',
       audioBitsPerSecond: 128000,
     };
     
-    mediaRecorderRef.current = new MediaRecorder(mediaStream, options);
-    chunksRef.current = [];
+    const recorder = new MediaRecorder(mediaStream, options);
+    mediaRecorderRef.current = recorder;
 
-    mediaRecorderRef.current.ondataavailable = (event) => {
+    recorder.ondataavailable = (event) => {
       if (event.data.size > 0) chunksRef.current.push(event.data);
     };
 
-    mediaRecorderRef.current.onstop = () => {
+    recorder.onstop = () => {
       let blob = new Blob(chunksRef.current, { type: 'audio/webm' });
       setAudioBlob(blob);
       setStatus('stopped');
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      stopTimer();
       stopStream();
     };
 
-    mediaRecorderRef.current.start();
+    recorder.start();
   };
 
   const stopRecording = () => {
@@ -108,7 +120,7 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
     setStatus('idle');
     setAudioBlob(null);
     setTimer(0);
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    stopTimer();
     stopStream();
   };
 
@@ -126,38 +138,38 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
         {status === 'error' && (
           <div className="flex items-center gap-2 text-destructive p-3 bg-destructive/10 rounded-md">
             <AlertCircle className="h-5 w-5" />
-            <p>Microphone access denied.</p>
+            <p>Mikrofonga ruxsat berilmagan.</p>
           </div>
         )}
         <div className="flex items-center justify-center gap-4 h-14">
           {status === 'idle' && (
             <Button onClick={startRecording} size="lg" className="w-48">
               <Mic className="mr-2 h-5 w-5" />
-              Record
+              Yozib olish
             </Button>
           )}
-          {status === 'permission' && <p>Requesting permission...</p>}
+          {status === 'permission' && <p>Ruxsat so'ralmoqda...</p>}
           {status === 'recording' && (
             <Button onClick={stopRecording} size="lg" variant="destructive" className="w-48">
               <StopCircle className="mr-2 h-5 w-5" />
-              Stop
+              To'xtatish
             </Button>
           )}
           {status === 'stopped' && (
             <div className="flex gap-2">
               <Button onClick={handleSave} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                 <Save className="mr-2 h-5 w-5" />
-                Save Recording
+                Saqlash
               </Button>
               <Button onClick={reset} size="lg" variant="outline">
                 <RefreshCcw className="mr-2 h-5 w-5" />
-                Discard
+                Bekor qilish
               </Button>
             </div>
           )}
         </div>
         <div className="text-3xl font-mono tabular-nums h-9 text-muted-foreground">
-          {(status === 'recording' || status === 'stopped' || timer > 0) && formatTime(timer)}
+          {(status !== 'idle' && status !== 'permission') && formatTime(timer)}
         </div>
       </CardContent>
     </Card>

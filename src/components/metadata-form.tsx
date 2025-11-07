@@ -34,21 +34,27 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const emotions = [
-  { id: 'neutral', label: 'Neutral' },
+  { id: 'neutral', label: 'Neytral (Neutral)' },
   { id: 'calm', label: 'Tinch (Calm)' },
-  { id: 'happy', label: 'Quvnoq (Happy)' },
+  { id: 'happy', label: 'Xursand (Happy)' },
   { id: 'sad', label: 'Xafa (Sad)' },
-  { id: 'angry', label: 'G‘azablangan (Angry)' },
-  { id: 'fearful', label: 'Qo‘rqqan (Fearful)' },
-  { id: 'disgust', label: 'Nafratlangan (Disgust)' },
-  { id: 'surprised', label: 'Hayratlangan (Surprised)' },
+  { id: 'angry', label: 'Jahldor (Angry)' },
+  { id: 'fearful', label: 'Qo‘rquv (Fearful)' },
+  { id: 'disgust', label: 'Jirkanish (Disgust)' },
+  { id: 'surprised', label: 'Hayrat (Surprised)' },
 ];
 
 const texts = [
-  { id: 'text1', label: 'Bolalar eshik yonida gaplashmoqda.' },
-  { id: 'text2', label: 'Itlar deraza yonida o‘tiribdi.' },
-  { id: 'text3', label: 'Bugun osmon tiniq, shamol yo‘q.' },
-  { id: 'text_new', label: 'Men bu narsani kutmagan edim, lekin baribir hammasi yaxshi bo‘ldi.' },
+    { id: 'sentence_1', label: 'Men bu narsani kutmagan edim, lekin baribir hammasi yaxshi bo‘ldi.' },
+    { id: 'sentence_2', label: 'Kecha bo‘lgan voqeani hali ham esdan chiqara olmayapman.' },
+    { id: 'sentence_3', label: 'Bu natijani ko‘rganimda o‘zimga ishonmadim.' },
+    { id: 'sentence_4', label: 'Bu odamning gaplari meni chuqur o‘ylantirib qo‘ydi.' },
+    { id: 'sentence_5', label: 'Shunaqa holatni hayotimda birinchi marta ko‘ryapman.' },
+    { id: 'sentence_6', label: 'U meni oldindan ogohlantirganda, hammasi boshqacha bo‘lardi.' },
+    { id: 'sentence_7', label: 'Men bu ishni uddalayman deb o‘ylamagan edim, lekin harakat qildim.' },
+    { id: 'sentence_8', label: 'Bir qarashda oddiy tuyulgan narsa aslida juda muhim ekan.' },
+    { id: 'sentence_9', label: 'Bunday natijani hech kim kutmagandi, lekin u yuz berdi.' },
+    { id: 'sentence_10', label: 'Ba’zan kichik bir so‘z ham odamning kayfiyatini o‘zgartiradi.' },
 ];
 
 const ageRanges = ['18-25', '26-35', '36-45', '46-55', '56+'];
@@ -121,7 +127,7 @@ export function MetadataForm({
       region: recording.region,
       emotion: recording.emotion || 'neutral',
       intensity: recording.intensity || 'normal',
-      textId: recording.textId || 'text1',
+      textId: recording.textId || 'sentence_1',
       personality: recording.personality || {
         extrovert: false,
         introvert: false,
@@ -143,7 +149,7 @@ export function MetadataForm({
       region: recording.region,
       emotion: recording.emotion || 'neutral',
       intensity: recording.intensity || 'normal',
-      textId: recording.textId || 'text1',
+      textId: recording.textId || 'sentence_1',
       personality: recording.personality || {
         extrovert: false,
         introvert: false,
