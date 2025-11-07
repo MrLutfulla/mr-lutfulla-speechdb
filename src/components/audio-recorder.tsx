@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, StopCircle, Save, AlertCircle, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface AudioRecorderProps {
   onSave: (blob: Blob) => void;
@@ -17,6 +18,7 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [timer, setTimer] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,9 +37,9 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
       timerIntervalRef.current = null;
     }
   }, []);
-
+  
   const startTimer = useCallback(() => {
-    stopTimer(); // Clear any existing timer
+    stopTimer(); 
     setTimer(0);
     timerIntervalRef.current = setInterval(() => {
       setTimer((prev) => prev + 1);
@@ -54,8 +56,15 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
 
   const startRecording = async () => {
     setStatus('permission');
+    setError(null);
     setAudioBlob(null);
     chunksRef.current = [];
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus('error');
+      setError("Bu brauzerda ovoz yozish qo'llab-quvvatlanmaydi. Iltimos, Chrome yoki Safari kabi standart brauzerdan foydalaning.");
+      return;
+    }
 
     let mediaStream: MediaStream;
     try {
@@ -66,14 +75,14 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
         }
       });
       setStream(mediaStream);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error accessing microphone:', err);
       setStatus('error');
-      toast({
-        title: 'Mikrofon bilan xatolik',
-        description: 'Mikrofonga kirish imkoni yo‘q. Iltimos, brauzer ruxsatlarini tekshiring.',
-        variant: 'destructive',
-      });
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError("Mikrofonga ruxsat berilmadi. Iltimos, brauzer sozlamalaridan ruxsat bering.");
+      } else {
+        setError("Mikrofonga kirish imkoni yo‘q. Agar siz Telegram kabi ilova ichidagi brauzerdan foydalanayotgan bo'lsangiz, iltimos, sahifani oddiy brauzerda (masalan, Chrome yoki Safari) oching.");
+      }
       return;
     }
     
@@ -119,6 +128,7 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
   const reset = () => {
     setStatus('idle');
     setAudioBlob(null);
+    setError(null);
     setTimer(0);
     stopTimer();
     stopStream();
@@ -135,11 +145,14 @@ export function AudioRecorder({ onSave }: AudioRecorderProps) {
   return (
     <Card className="w-full max-w-sm shadow-lg">
       <CardContent className="flex flex-col items-center gap-4 p-6">
-        {status === 'error' && (
-          <div className="flex items-center gap-2 text-destructive p-3 bg-destructive/10 rounded-md">
-            <AlertCircle className="h-5 w-5" />
-            <p>Mikrofonga ruxsat berilmagan.</p>
-          </div>
+        {status === 'error' && error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Mikrofonga kirishda xatolik</AlertTitle>
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
         )}
         <div className="flex items-center justify-center gap-4 h-14">
           {status === 'idle' && (
