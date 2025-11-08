@@ -165,7 +165,7 @@ export function MetadataForm({
         compassionate: false,
       },
     });
-  }, [recording, form]);
+  }, [recording]);
 
 
   function onSubmit(values: FormValues) {
