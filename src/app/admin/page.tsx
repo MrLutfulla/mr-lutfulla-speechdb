@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import JSZip from 'jszip';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function base64ToBlob(base64: string): Blob {
     const [header, data] = base64.split(',');
@@ -42,7 +43,9 @@ function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const { toast } = useToast();
-  
+  const isMobile = useIsMobile();
+  const [view, setView] = useState<'list' | 'recordings' | 'details'>('list');
+
   const userIsAdmin = !userLoading && user && isAdmin(user.uid);
 
   // Redirect non-admins
@@ -53,6 +56,17 @@ function AdminPage() {
       router.push('/');
     }
   }, [user, userLoading, router]);
+  
+  // Reset view on screen size change
+  useEffect(() => {
+      if (!isMobile) {
+          setView('list'); // Default to showing everything on desktop
+      } else {
+          if (selectedRecordingId) setView('details');
+          else if (selectedUserId) setView('recordings');
+          else setView('list');
+      }
+  }, [isMobile, selectedUserId, selectedRecordingId]);
 
   // Effect to load all users in real-time
   useEffect(() => {
@@ -70,14 +84,13 @@ function AdminPage() {
           uid: userDoc.id,
         } as UserProfile;
 
-        // Fetch recording count for each user
         try {
             const recordingsCol = collection(firestore, 'users', userDoc.id, 'recordings');
             const snapshot = await getCountFromServer(recordingsCol);
             userProfile.recordingCount = snapshot.data().count;
         } catch (e) {
             console.error(`Could not fetch recording count for user ${userDoc.id}`, e);
-            userProfile.recordingCount = 0; // Default to 0 on error
+            userProfile.recordingCount = 0;
         }
         
         return userProfile;
@@ -146,12 +159,24 @@ function AdminPage() {
   const handleSelectUser = (uid: string) => {
     setSelectedUserId(uid);
     setSelectedRecordingId(null);
+    if (isMobile) setView('recordings');
   };
   
   const handleSelectRecording = (id: string) => {
     setSelectedRecordingId(id);
+    if (isMobile) setView('details');
   }
   
+  const handleBack = () => {
+      if (view === 'details') {
+          setSelectedRecordingId(null);
+          setView('recordings');
+      } else if (view === 'recordings') {
+          setSelectedUserId(null);
+          setView('list');
+      }
+  }
+
   const showReadOnlyToast = () => {
       toast({
         variant: "destructive",
@@ -167,6 +192,76 @@ function AdminPage() {
       description: "Foydalanuvchi UID'si vaqtinchalik xotiraga saqlandi.",
     });
   }
+
+ const handleExportUserData = async (userId: string, userName: string | null) => {
+    if (!firestore) return;
+
+    toast({
+      title: "Eksport boshlanmoqda...",
+      description: `${userName || 'Foydalanuvchi'} ma'lumotlari yig'ilmoqda.`,
+    });
+    
+    try {
+        const zip = new JSZip();
+        const metadata: any[] = [];
+        const recordingsSnapshot = await getDocs(collection(firestore, 'users', userId, 'recordings'));
+
+        if (recordingsSnapshot.empty) {
+            toast({
+              variant: "destructive",
+              title: "Ma'lumot topilmadi",
+              description: "Bu foydalanuvchi uchun eksport qilinadigan yozuvlar yo'q.",
+            });
+            return;
+        }
+
+        for (const recDoc of recordingsSnapshot.docs) {
+          const recData = recDoc.data();
+          const audioBase64 = recData.audioBase64;
+          const fileName = `${recData.speakerId || 'unknown'}_${recDoc.id}.webm`;
+
+          metadata.push({
+            fileName,
+            userId,
+            recordingId: recDoc.id,
+            ...recData,
+            audioBase64: undefined, // Don't include base64 in metadata.json
+          });
+
+          if (audioBase64) {
+            const audioBlob = base64ToBlob(audioBase64);
+            zip.file(fileName, audioBlob);
+          }
+        }
+        
+        zip.file("metadata.json", JSON.stringify(metadata, null, 2));
+
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        const safeName = (userName || userId).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        a.download = `speechcraft-export-${safeName}-${new Date().toISOString().split("T")[0]}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+            title: "Eksport muvaffaqiyatli",
+            description: `${userName || 'Foydalanuvchi'} ma'lumotlari ZIP faylga saqlandi.`,
+        });
+
+    } catch (err) {
+        console.error("User export error:", err);
+        toast({
+            title: "Eksportda xatolik",
+            description: "Ma'lumotlarni eksport qilishda kutilmagan xatolik yuz berdi.",
+            variant: "destructive",
+        });
+    }
+ };
+
 
   const handleExportAllData = async () => {
     if (!firestore) return;
@@ -274,12 +369,16 @@ function AdminPage() {
      );
   }
 
+  const showUsersList = !isMobile || (isMobile && view === 'list');
+  const showRecordingsList = !isMobile || (isMobile && view === 'recordings');
+  const showDetails = !isMobile || (isMobile && view === 'details');
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
       <div className="flex flex-1 overflow-hidden">
         {/* Users List */}
-        <div className="w-full md:w-96 shrink-0 border-r bg-card flex flex-col">
+        <div className={cn("w-full md:w-96 shrink-0 border-r bg-card flex flex-col", showUsersList ? "flex" : "hidden md:flex")}>
             <div className="p-4 border-b">
                  <h2 className="text-xl font-headline font-bold">Foydalanuvchilar ({users.length})</h2>
                  <Button onClick={handleExportAllData} variant="outline" size="sm" className="mt-2 w-full">
@@ -324,16 +423,11 @@ function AdminPage() {
                                   <p className={cn('text-xs font-mono truncate', selectedUserId === u.uid ? 'text-accent-foreground/60' : 'text-muted-foreground/80')}>
                                       {u.uid}
                                   </p>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCopyUid(u.uid);
-                                    }}
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleCopyUid(u.uid); }}>
                                     <Copy className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleExportUserData(u.uid, u.displayName); }}>
+                                    <Download className="h-3 w-3" />
                                   </Button>
                               </div>
                           </div>
@@ -344,8 +438,9 @@ function AdminPage() {
         </div>
 
         {/* Recordings List */}
-        <div className="w-full md:w-96 shrink-0 border-r bg-card flex flex-col">
-          <div className="p-4 border-b">
+        <div className={cn("w-full md:w-96 shrink-0 border-r bg-card flex flex-col", showRecordingsList ? "flex" : "hidden md:flex")}>
+          <div className="p-4 border-b flex items-center gap-4">
+            {isMobile && <Button variant="ghost" size="icon" onClick={handleBack}><Mic className="h-5 w-5" /></Button>}
             <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
           </div>
           {selectedUserId ? (
@@ -363,7 +458,7 @@ function AdminPage() {
         </div>
 
         {/* Recording Details */}
-        <main className="flex-1">
+        <main className={cn("flex-1", showDetails ? "block" : "hidden md:block")}>
              <ScrollArea className="h-full">
                 <div className="p-4 md:p-8">
                 {selectedRecording ? (
@@ -372,7 +467,7 @@ function AdminPage() {
                         recording={selectedRecording}
                         onUpdateRecording={showReadOnlyToast}
                         onDeleteRecording={showReadOnlyToast}
-                        onClearSelection={() => setSelectedRecordingId(null)}
+                        onClearSelection={handleBack}
                         isReadOnly={true}
                     />
                 ) : (
@@ -391,5 +486,3 @@ function AdminPage() {
 }
 
 export default AdminPage;
-
-    

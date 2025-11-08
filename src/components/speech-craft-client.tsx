@@ -77,6 +77,20 @@ export function SpeechCraftClient() {
   const firestore = useFirestore();
 
   const isMobile = useIsMobile();
+  
+  // Reset view on screen size change or when selections are cleared
+  useEffect(() => {
+      if (isMobile) {
+          if (view === 'details' && !selectedRecordingId) {
+              setView('list');
+          }
+      } else {
+          // On desktop, the view logic is simpler, mostly handled by layout
+          if (view === 'new') setView('new');
+          else setView('list');
+      }
+  }, [isMobile, selectedRecordingId, view]);
+
 
   /* --- Mount: Load from Firestore --- */
   useEffect(() => {
@@ -211,7 +225,6 @@ export function SpeechCraftClient() {
   const handleUpdateRecording = async (updatedRecording: Recording) => {
     if (!user || !firestore) return;
     
-    // Find the original recording to preserve the Timestamp object if it exists
     const originalRecording = recordings.find(r => r.id === updatedRecording.id);
     if (!originalRecording) return;
 
@@ -219,11 +232,8 @@ export function SpeechCraftClient() {
     const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
     
     try {
-      // Ensure createdAt is not overwritten with a string
       const updatePayload = {
         ...dataToUpdate,
-        // Don't include createdAt in the update payload unless you intend to change it
-        // Firestore automatically preserves the existing value if not specified
       };
 
       await updateDoc(docRef, updatePayload);
@@ -253,10 +263,8 @@ export function SpeechCraftClient() {
               throw "Foydalanuvchi profili topilmadi!";
           }
 
-          // Delete the recording
           transaction.delete(recordingRef);
 
-          // Decrement the recording count
           const currentCount = userDoc.data().recordingCount || 0;
           transaction.update(userRef, { recordingCount: Math.max(0, currentCount - 1) });
       });
@@ -282,14 +290,11 @@ export function SpeechCraftClient() {
         const userRef = doc(firestore, 'users', user.uid);
         const recordingsRef = collection(userRef, 'recordings');
         
-        // Firestore doesn't have a direct batch delete for subcollections without reading all docs.
-        // We iterate and delete. For very large collections, a backend function would be better.
         const snapshot = await getDocs(recordingsRef);
         const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
         
         await Promise.all(deletePromises);
 
-        // After deleting all, reset count to 0.
         await updateDoc(userRef, { recordingCount: 0 });
 
         handleClearSelection();
@@ -323,7 +328,6 @@ export function SpeechCraftClient() {
       const metadata: any[] = [];
 
       for (const rec of recordings) {
-        // Use a structured, machine-learning friendly filename
         const fileName = `${rec.speakerId}_${rec.id}.webm`;
         const { audioBase64, ...rest } = rec;
         
