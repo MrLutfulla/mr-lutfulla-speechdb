@@ -125,6 +125,18 @@ export function MetadataForm({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     disabled: isReadOnly,
+    defaultValues: {
+        gender: recording.gender || 'male',
+        age: recording.age || '18-25',
+        region: recording.region || 'toshkent',
+        emotion: recording.emotion || 'neutral',
+        intensity: recording.intensity || 'normal',
+        textId: recording.textId || 'sentence_1',
+        personality: recording.personality || {
+            extrovert: false, introvert: false, optimistic: false, emotional: false,
+            calm: false, analytical: false, leader: false, compassionate: false,
+        },
+    }
   });
 
   useEffect(() => {
@@ -150,7 +162,6 @@ export function MetadataForm({
       ...recording,
       ...values,
     });
-    form.reset(values); // Keep form values after saving
   }
 
   const selectedText = texts.find((t) => t.id === form.watch('textId'))?.label;
@@ -349,7 +360,7 @@ export function MetadataForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Hududni tanlang..." />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         {regions.map((region) => (
@@ -409,3 +420,5 @@ export function MetadataForm({
     </Form>
   );
 }
+
+    
