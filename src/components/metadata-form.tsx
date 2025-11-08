@@ -1,17 +1,14 @@
 
 'use client';
 
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Recording, PersonalityTraits } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useEffect } from 'react';
 
 const emotions = [
   { id: 'neutral', label: 'Neytral (Neutral)' },
@@ -304,7 +302,7 @@ export function MetadataForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Jinsini tanlang..." />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="male">Erkak</SelectItem>
@@ -329,7 +327,7 @@ export function MetadataForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Yosh oralig'ini tanlang..." />
-                        </Trigger>
+                        </SelectValue>
                       </FormControl>
                       <SelectContent>
                         {ageRanges.map((age) => (
@@ -357,7 +355,7 @@ export function MetadataForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Hududni tanlang..." />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {regions.map((region) => (
@@ -381,7 +379,7 @@ export function MetadataForm({
             <CardDescription>
               Iltimos, o‘zingizga eng yaqin deb hisoblagan xususiyatlarni belgilang.
             </CardDescription>
-          </Header>
+          </CardHeader>
           <CardContent className="space-y-4">
             {personalityTraits.map((item) => (
               <FormField
@@ -417,3 +415,5 @@ export function MetadataForm({
     </Form>
   );
 }
+
+    
