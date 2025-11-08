@@ -142,7 +142,7 @@ export function MetadataForm({
         compassionate: false,
       },
     },
-    disabled: isReadOnly
+    disabled: isReadOnly,
   });
 
   useEffect(() => {
@@ -378,7 +378,7 @@ export function MetadataForm({
                   <FormItem>
                     <FormLabel>Hudud</FormLabel>
                     <Select
-                      onValuechange={field.onChange}
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       disabled={isReadOnly}
                     >
