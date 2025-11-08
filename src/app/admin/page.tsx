@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
-import { collection, onSnapshot, query, orderBy, Timestamp, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, getCountFromServer } from 'firebase/firestore';
 import { Loader2, Mic } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
@@ -52,12 +52,26 @@ function AdminPage() {
     setLoadingUsers(true);
     const usersCollection = collection(firestore, 'users');
     const unsubscribeUsers = onSnapshot(usersCollection, async (usersSnapshot) => {
-      const usersData = usersSnapshot.docs.map((userDoc) => {
-        return {
+      const usersDataPromises = usersSnapshot.docs.map(async (userDoc) => {
+        const userProfile = {
           ...(userDoc.data() as Omit<UserProfile, 'uid'>),
           uid: userDoc.id,
         } as UserProfile;
+
+        // Fetch recording count for each user
+        try {
+            const recordingsCol = collection(firestore, 'users', userDoc.id, 'recordings');
+            const snapshot = await getCountFromServer(recordingsCol);
+            userProfile.recordingCount = snapshot.data().count;
+        } catch (e) {
+            console.error(`Could not fetch recording count for user ${userDoc.id}`, e);
+            userProfile.recordingCount = 0; // Default to 0 on error
+        }
+        
+        return userProfile;
       });
+
+      const usersData = await Promise.all(usersDataPromises);
       setUsers(usersData);
       setLoadingUsers(false);
     }, (error) => {
@@ -285,3 +299,5 @@ function AdminPage() {
 }
 
 export default AdminPage;
+
+    
