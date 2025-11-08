@@ -29,16 +29,22 @@ function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  const userIsAdmin = !userLoading && user && isAdmin(user.uid);
 
+  // Redirect non-admins
   useEffect(() => {
-    if (!userLoading && !isAdmin(user?.uid || '')) {
+    if (!userLoading && !userIsAdmin) {
       router.push('/');
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, userIsAdmin, router]);
 
   // Effect to load all users
   useEffect(() => {
-    if (!firestore || !user || !isAdmin(user.uid)) return;
+    if (!firestore || !userIsAdmin) {
+      if(!userLoading) setLoadingUsers(false);
+      return;
+    };
 
     setLoadingUsers(true);
     const usersCollection = collection(firestore, 'users');
@@ -75,7 +81,7 @@ function AdminPage() {
     });
 
     return () => unsubscribeUsers();
-  }, [firestore, user, toast]);
+  }, [firestore, userIsAdmin, userLoading, toast]);
 
   // Effect to load recordings when a user is selected
   useEffect(() => {
@@ -151,7 +157,7 @@ function AdminPage() {
     return userRecordings.find(r => r.id === selectedRecordingId);
   }, [selectedRecordingId, userRecordings]);
 
-  if (userLoading || (!user && !userLoading)) {
+  if (userLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -159,7 +165,7 @@ function AdminPage() {
     );
   }
   
-  if (!isAdmin(user?.uid || '')) {
+  if (!userIsAdmin) {
      return (
         <div className="flex flex-col h-screen bg-background">
          <Header />
@@ -287,5 +293,3 @@ function AdminPage() {
 }
 
 export default AdminPage;
-
-    
