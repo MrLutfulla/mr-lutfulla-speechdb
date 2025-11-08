@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { Header } from '@/components/header';
 import { SpeechCraftClient } from '@/components/speech-craft-client';
 import { Loader2 } from 'lucide-react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
 
 
@@ -19,17 +19,7 @@ export default function Home() {
     if (!loading && !user) {
       router.push('/login');
     }
-    if (!loading && user && firestore) {
-      // Save or update user profile in Firestore
-      const userRef = doc(firestore, 'users', user.uid);
-      const userData: Partial<UserProfile> = {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-      };
-      setDoc(userRef, userData, { merge: true });
-    }
+    // Logic to create user profile is now in signup page
   }, [user, loading, router, firestore]);
 
   if (loading || !user) {

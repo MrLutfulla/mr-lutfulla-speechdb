@@ -1,7 +1,8 @@
 'use client';
 
-import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth, useUser, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useRouter, redirect } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -11,15 +12,18 @@ import { Label } from '@/components/ui/label';
 import { Waves, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { UserProfile } from '@/lib/types';
 
-export default function LoginPage() {
+export default function SignupPage() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
     if (!userLoading && user) {
@@ -27,34 +31,48 @@ export default function LoginPage() {
     }
   }, [user, userLoading]);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth || !firestore) return;
 
     setError(null);
-    setIsSigningIn(true);
+    setIsSigningUp(true);
+
+    if (password.length < 6) {
+        setError("Parol kamida 6 belgidan iborat bo'lishi kerak.");
+        setIsSigningUp(false);
+        return;
+    }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // On successful login, the useUser hook will trigger the redirect
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
+
+      // Update user profile (display name)
+      await updateProfile(newUser, { displayName });
+
+      // Create user document in Firestore
+      const userRef = doc(firestore, 'users', newUser.uid);
+      const userData: Partial<UserProfile> = {
+        uid: newUser.uid,
+        email: newUser.email,
+        displayName: displayName,
+        photoURL: newUser.photoURL,
+        recordingCount: 0,
+      };
+      await setDoc(userRef, userData, { merge: true });
+
+      // Redirect to home page
       router.push('/');
     } catch (err: any) {
       console.error(err);
-      switch (err.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          setError("Noto'g'ri e-pochta yoki parol.");
-          break;
-        case 'auth/invalid-email':
-          setError("Iltimos, to'g'ri e-pochta manzilini kiriting.");
-          break;
-        default:
-          setError("Tizimga kirishda kutilmagan xatolik yuz berdi.");
-          break;
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Bu e-pochta manzili allaqachon ro‘yxatdan o‘tgan.');
+      } else {
+        setError("Ro'yxatdan o'tishda kutilmagan xatolik yuz berdi.");
       }
     } finally {
-      setIsSigningIn(false);
+      setIsSigningUp(false);
     }
   };
 
@@ -69,16 +87,16 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-sm">
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleSignup}>
           <CardHeader className="text-center">
-            <div className="flex items-center gap-3 justify-center mb-4">
+             <div className="flex items-center gap-3 justify-center mb-4">
               <Waves className="h-8 w-8 text-primary" />
               <h1 className="text-3xl font-headline font-bold text-foreground">
                 MrL Speech craft
               </h1>
             </div>
-            <CardTitle className="text-2xl">Kirish</CardTitle>
-            <CardDescription>Davom etish uchun hisobingizga kiring</CardDescription>
+            <CardTitle className="text-2xl">Ro'yxatdan o'tish</CardTitle>
+            <CardDescription>Yangi hisob yaratish</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
@@ -88,6 +106,18 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+             <div className="space-y-2">
+              <Label htmlFor="displayName">Ism</Label>
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="Ismingiz"
+                required
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                disabled={isSigningUp}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Elektron pochta</Label>
               <Input
@@ -97,7 +127,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isSigningIn}
+                disabled={isSigningUp}
               />
             </div>
             <div className="space-y-2">
@@ -108,19 +138,19 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isSigningIn}
+                disabled={isSigningUp}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isSigningIn}>
-              {isSigningIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Kirish'}
+            <Button type="submit" className="w-full" disabled={isSigningUp}>
+              {isSigningUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Hisob yaratish"}
             </Button>
           </CardContent>
         </form>
         <CardFooter className="flex justify-center text-sm">
           <p className="text-muted-foreground">
-            Hisobingiz yo'qmi?{' '}
-            <Link href="/signup" className="text-primary hover:underline">
-              Ro'yxatdan o'tish
+            Hisobingiz bormi?{' '}
+            <Link href="/login" className="text-primary hover:underline">
+              Kirish
             </Link>
           </p>
         </CardFooter>
