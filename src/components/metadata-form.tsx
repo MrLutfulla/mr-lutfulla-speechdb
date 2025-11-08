@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -13,6 +12,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Card,
@@ -133,7 +133,6 @@ export function MetadataForm({
             calm: false, analytical: false, leader: false, compassionate: false,
         },
     },
-    disabled: isReadOnly,
   });
   
   useEffect(() => {
@@ -149,7 +148,7 @@ export function MetadataForm({
             calm: false, analytical: false, leader: false, compassionate: false,
         },
     });
-  }, [recording, form.reset]);
+  }, [recording, form]);
 
 
   function onSubmit(values: FormValues) {
@@ -415,5 +414,3 @@ export function MetadataForm({
     </Form>
   );
 }
-
-    
