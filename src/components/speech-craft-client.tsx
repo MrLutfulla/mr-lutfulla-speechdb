@@ -35,7 +35,7 @@ import {
   Timestamp,
   query,
   orderBy,
-  getCountFromServer,
+  getDocs,
   runTransaction
 } from "firebase/firestore";
 
@@ -164,18 +164,19 @@ export function SpeechCraftClient() {
         const currentRecordingCount = userProfile.recordingCount || 0;
         const newRecordingCount = currentRecordingCount + 1;
 
-        const speakerName = userProfile.displayName?.replace(/\s+/g, '_') || 'User';
-        const speakerId = `${speakerName}_${newRecordingCount.toString().padStart(2, '0')}`;
+        // Use a sanitized display name and the new count for the speaker ID
+        const speakerName = userProfile.displayName?.replace(/[^a-zA-Z0-9]/g, '_') || 'User';
+        const speakerId = `${speakerName}_${String(newRecordingCount).padStart(2, '0')}`;
         
         const newRecordingDoc: Omit<Recording, 'id' | 'createdAt'> = {
           audioBase64,
-          speakerId,
+          speakerId, // The new structured ID
           textId: metadata.textId,
           emotion: metadata.emotion,
-          intensity: "normal",
-          gender: "male",
-          age: "18-25",
-          region: "toshkent",
+          intensity: "normal", // Default, can be changed in the form
+          gender: "male", // Default, can be changed in the form
+          age: "18-25", // Default, can be changed in the form
+          region: "toshkent", // Default, can be changed in the form
           personality: {
             extrovert: false, introvert: false, optimistic: false, emotional: false,
             calm: false, analytical: false, leader: false, compassionate: false,
@@ -283,8 +284,7 @@ export function SpeechCraftClient() {
         
         // Firestore doesn't have a direct batch delete for subcollections without reading all docs.
         // We iterate and delete. For very large collections, a backend function would be better.
-        const q = query(recordingsRef);
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(recordingsRef);
         const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
         
         await Promise.all(deletePromises);
@@ -323,12 +323,12 @@ export function SpeechCraftClient() {
       const metadata: any[] = [];
 
       for (const rec of recordings) {
-        const fileName = `${rec.speakerId.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${rec.id}.webm`;
-        const { audioBase64, createdAt, ...rest } = rec;
+        // Use a structured, machine-learning friendly filename
+        const fileName = `${rec.speakerId}_${rec.id}.webm`;
+        const { audioBase64, ...rest } = rec;
         
         metadata.push({ 
           ...rest, 
-          createdAt: (createdAt as string),
           fileName 
         });
 
@@ -342,7 +342,7 @@ export function SpeechCraftClient() {
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `speechcraft-export-${new Date().toISOString().split("T")[0]}.zip`;
+      a.download = `speechcraft-export-${user?.displayName || 'user'}-${new Date().toISOString().split("T")[0]}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

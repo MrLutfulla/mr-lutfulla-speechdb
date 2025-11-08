@@ -6,7 +6,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
 import { collection, onSnapshot, query, orderBy, Timestamp, doc, getCountFromServer, getDocs } from 'firebase/firestore';
-import { Loader2, Mic, Download } from 'lucide-react';
+import { Loader2, Mic, Download, Copy, Trash2 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
 import { RecordingList } from '@/components/recording-list';
@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import JSZip from 'jszip';
 
@@ -189,21 +188,24 @@ function AdminPage() {
         const userData = userDoc.data() as UserProfile;
 
         for (const recDoc of recordingsSnapshot.docs) {
-          const rec = recDoc.data() as Omit<Recording, 'id'>;
-          const fileName = `${rec.speakerId.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${recDoc.id}.webm`;
+          const rec = recDoc.data() as Omit<Recording, 'id'| 'audioBase64'>;
+          const audioBase64 = recDoc.data().audioBase64;
+          
+          const fileName = `${rec.speakerId}_${recDoc.id}.webm`;
           
           allMetadata.push({
+            fileName,
             userId: userDoc.id,
             userDisplayName: userData.displayName,
             userEmail: userData.email,
             recordingId: recDoc.id,
-            fileName,
             ...rec,
-            createdAt: (rec.createdAt as Timestamp)?.toDate()?.toISOString() || rec.createdAt,
           });
 
-          const audioBlob = base64ToBlob(rec.audioBase64);
-          zip.file(fileName, audioBlob);
+          if (audioBase64) {
+            const audioBlob = base64ToBlob(audioBase64);
+            zip.file(fileName, audioBlob);
+          }
         }
       }
 
