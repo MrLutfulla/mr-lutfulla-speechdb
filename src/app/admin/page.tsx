@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
-import { collection, onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { Loader2, Mic } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
@@ -72,11 +72,18 @@ function AdminPage() {
     const q = query(recordingsCollection, orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const recordingsData = snapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
-            createdAt: doc.data().createdAt.toDate().toISOString(),
-        } as Recording));
+        const recordingsData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Handle both Timestamp and ISO string formats for createdAt
+            const createdAt = data.createdAt instanceof Timestamp 
+              ? data.createdAt.toDate().toISOString() 
+              : data.createdAt;
+            return {
+                ...data,
+                id: doc.id,
+                createdAt,
+            } as Recording;
+        });
         setUserRecordings(recordingsData);
         setLoadingRecordings(false);
     }, (error) => {

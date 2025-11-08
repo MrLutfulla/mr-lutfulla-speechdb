@@ -89,10 +89,14 @@ export function SpeechCraftClient() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const loaded: Recording[] = snapshot.docs.map(doc => {
         const data = doc.data();
+        // Handle both Timestamp and ISO string formats for createdAt
+        const createdAt = data.createdAt instanceof Timestamp 
+          ? data.createdAt.toDate().toISOString() 
+          : data.createdAt;
         return {
           ...data,
           id: doc.id,
-          createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+          createdAt,
         } as Recording;
       });
       setRecordings(loaded);
@@ -176,13 +180,25 @@ export function SpeechCraftClient() {
   };
 
   /* --- Update Recording Metadata --- */
-  const handleUpdateRecording = async (updatedRecording: Omit<Recording, 'createdAt'>) => {
+  const handleUpdateRecording = async (updatedRecording: Recording) => {
     if (!user || !firestore) return;
-    const { id, ...dataToUpdate } = updatedRecording;
+    
+    // Find the original recording to preserve the Timestamp object if it exists
+    const originalRecording = recordings.find(r => r.id === updatedRecording.id);
+    if (!originalRecording) return;
+
+    const { id, createdAt, ...dataToUpdate } = updatedRecording;
     const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
     
     try {
-      await updateDoc(docRef, dataToUpdate);
+      // Ensure createdAt is not overwritten with a string
+      const updatePayload = {
+        ...dataToUpdate,
+        // Don't include createdAt in the update payload unless you intend to change it
+        // Firestore automatically preserves the existing value if not specified
+      };
+
+      await updateDoc(docRef, updatePayload);
       toast({
         title: "Ma'lumotlar yangilandi",
         description: "O'zgarishlaringiz saqlandi.",

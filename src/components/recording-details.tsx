@@ -33,9 +33,10 @@ export function RecordingDetails({
   isReadOnly = false,
 }: RecordingDetailsProps) {
 
-  const createdAtDate = recording.createdAt instanceof Date 
-    ? recording.createdAt 
-    : new Date(recording.createdAt as string);
+  // Ensure createdAt is always a Date object before passing to components
+  const createdAtDate = typeof recording.createdAt === 'string' 
+    ? new Date(recording.createdAt) 
+    : recording.createdAt.toDate();
 
   return (
     <div className="space-y-6">
