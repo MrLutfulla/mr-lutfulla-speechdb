@@ -5,8 +5,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
-import { collection, onSnapshot, query, orderBy, Timestamp, doc, getCountFromServer } from 'firebase/firestore';
-import { Loader2, Mic } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, getCountFromServer, getDocs } from 'firebase/firestore';
+import { Loader2, Mic, Download } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
 import { RecordingList } from '@/components/recording-list';
@@ -18,6 +18,19 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import JSZip from 'jszip';
+
+function base64ToBlob(base64: string): Blob {
+    const [header, data] = base64.split(',');
+    const mime = header.match(/:(.*?);/)?.[1];
+    const bstr = atob(data);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
 
 function AdminPage() {
   const { user, loading: userLoading } = useUser();
@@ -155,6 +168,80 @@ function AdminPage() {
       description: "Foydalanuvchi UID'si vaqtinchalik xotiraga saqlandi.",
     });
   }
+
+  const handleExportAllData = async () => {
+    if (!firestore) return;
+
+    toast({
+      title: "Eksport boshlanmoqda...",
+      description: "Barcha ma'lumotlar yig'ilmoqda, bu biroz vaqt olishi mumkin.",
+    });
+
+    try {
+      const zip = new JSZip();
+      const allMetadata: any[] = [];
+      const usersSnapshot = await getDocs(collection(firestore, 'users'));
+
+      for (const userDoc of usersSnapshot.docs) {
+        const recordingsSnapshot = await getDocs(collection(firestore, 'users', userDoc.id, 'recordings'));
+        if (recordingsSnapshot.empty) continue;
+
+        const userData = userDoc.data() as UserProfile;
+
+        for (const recDoc of recordingsSnapshot.docs) {
+          const rec = recDoc.data() as Omit<Recording, 'id'>;
+          const fileName = `${rec.speakerId.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${recDoc.id}.webm`;
+          
+          allMetadata.push({
+            userId: userDoc.id,
+            userDisplayName: userData.displayName,
+            userEmail: userData.email,
+            recordingId: recDoc.id,
+            fileName,
+            ...rec,
+            createdAt: (rec.createdAt as Timestamp)?.toDate()?.toISOString() || rec.createdAt,
+          });
+
+          const audioBlob = base64ToBlob(rec.audioBase64);
+          zip.file(fileName, audioBlob);
+        }
+      }
+
+      if (allMetadata.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Ma'lumot topilmadi",
+          description: "Eksport uchun hech qanday yozuvlar topilmadi.",
+        });
+        return;
+      }
+
+      zip.file("metadata.json", JSON.stringify(allMetadata, null, 2));
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `speechcraft-full-export-${new Date().toISOString().split("T")[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Eksport muvaffaqiyatli",
+        description: "Barcha yozuvlar va ma'lumotlar ZIP faylga saqlandi.",
+      });
+
+    } catch (err) {
+      console.error("Export error:", err);
+      toast({
+        title: "Eksportda xatolik",
+        description: "Ma'lumotlarni eksport qilishda kutilmagan xatolik yuz berdi.",
+        variant: "destructive",
+      });
+    }
+  };
   
   const selectedRecording = useMemo(() => {
     return userRecordings.find(r => r.id === selectedRecordingId);
@@ -193,6 +280,9 @@ function AdminPage() {
         <div className="w-full md:w-96 shrink-0 border-r bg-card flex flex-col">
             <div className="p-4 border-b">
                  <h2 className="text-xl font-headline font-bold">Foydalanuvchilar ({users.length})</h2>
+                 <Button onClick={handleExportAllData} variant="outline" size="sm" className="mt-2 w-full">
+                    <Download className="mr-2 h-4 w-4" /> Barcha ma'lumotlarni eksport qilish
+                </Button>
             </div>
             <ScrollArea>
                 {loadingUsers ? (
