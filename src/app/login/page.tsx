@@ -12,40 +12,45 @@ export default function LoginPage() {
   const auth = useAuth();
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(true); // Start as true to handle redirect
 
   useEffect(() => {
-    if (userLoading) {
-      // Wait for user status to be determined
-      return;
-    }
-    if (user) {
+    // If user is already loaded and exists, redirect to home
+    if (!userLoading && user) {
       router.push('/');
       return;
     }
-    // If not logged in and not loading, check for redirect result
-    if (auth) {
-      setIsSigningIn(true);
+    
+    // When the component mounts, check for the result of a redirect
+    if (auth && !user) {
       getRedirectResult(auth)
         .then((result) => {
-          if (result?.user) {
-            router.push('/');
+          if (result) {
+            // This means the user has just signed in via redirect.
+            // The useUser hook will soon update with the new user,
+            // triggering the redirect to '/'
+            // No need to explicitly push router here again.
           }
         })
         .catch((error) => {
-          console.error('Error getting redirect result: ', error);
+          // Handle errors here, such as "auth/unauthorized-domain"
+          console.error("Firebase redirect error:", error);
+          alert(`Kirishda xatolik yuz berdi: ${error.message}`);
         })
         .finally(() => {
-           setIsSigningIn(false);
+          // Finished checking for redirect result, stop the loading indicator
+          setIsSigningIn(false);
         });
+    } else if (!userLoading && !user) {
+        // If not loading and no user, it's safe to stop the sign-in indicator
+        setIsSigningIn(false);
     }
-  }, [user, userLoading, auth, router]);
+  }, [auth, user, userLoading, router]);
 
   const handleGoogleSignIn = async () => {
     if (!auth) return;
-    setIsSigningIn(true);
+    setIsSigningIn(true); // Show loader immediately
     const provider = new GoogleAuthProvider();
-    // Instead of popup, we use redirect
     await signInWithRedirect(auth, provider);
   };
   
@@ -58,12 +63,19 @@ export default function LoginPage() {
     </svg>
   );
 
-  if (userLoading || isSigningIn || user) {
+  // Show a loading screen while user state is being determined or sign-in is in progress.
+  if (userLoading || isSigningIn) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
+  }
+  
+  // If user is logged in, this component will redirect. If not, show the login page.
+  // This prevents a flash of the login page before redirecting.
+  if (user) {
+    return null;
   }
 
   return (
@@ -80,12 +92,8 @@ export default function LoginPage() {
           <CardDescription>Davom etish uchun hisobingizga kiring</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleGoogleSignIn} className="w-full" variant="outline" disabled={isSigningIn}>
-            {isSigningIn ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
+          <Button onClick={handleGoogleSignIn} className="w-full" variant="outline">
               <GoogleIcon />
-            )}
             Google orqali kirish
           </Button>
         </CardContent>
