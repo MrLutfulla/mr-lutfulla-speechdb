@@ -142,6 +142,7 @@ export function MetadataForm({
         compassionate: false,
       },
     },
+    disabled: isReadOnly
   });
 
   useEffect(() => {
@@ -166,13 +167,6 @@ export function MetadataForm({
     });
   }, [recording, form]);
 
-  useEffect(() => {
-    if (isReadOnly) {
-      form.disable();
-    } else {
-      form.enable();
-    }
-  }, [isReadOnly, form]);
 
   function onSubmit(values: FormValues) {
     onSave({
@@ -244,6 +238,7 @@ export function MetadataForm({
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={isReadOnly}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -273,6 +268,7 @@ export function MetadataForm({
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex items-center space-x-4"
+                      disabled={isReadOnly}
                     >
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
@@ -314,6 +310,7 @@ export function MetadataForm({
                     <Input
                       placeholder="e.g. UZ_01"
                       {...field}
+                      disabled={isReadOnly}
                     />
                   </FormControl>
                   <FormMessage />
@@ -330,6 +327,7 @@ export function MetadataForm({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isReadOnly}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -354,6 +352,7 @@ export function MetadataForm({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isReadOnly}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -381,6 +380,7 @@ export function MetadataForm({
                     <Select
                       onValuechange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isReadOnly}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -422,6 +422,7 @@ export function MetadataForm({
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        disabled={isReadOnly}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
