@@ -191,11 +191,14 @@ function AdminPage() {
                     </div>
                 ) : (
                   users.map(u => (
-                      <button
+                      <div
                           key={u.uid}
                           onClick={() => handleSelectUser(u.uid)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleSelectUser(u.uid)}
                           className={cn(
-                              'w-full text-left p-3 transition-colors flex items-start gap-3 border-b',
+                              'w-full text-left p-3 transition-colors flex items-start gap-3 border-b cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring',
                               selectedUserId === u.uid ? 'bg-accent' : 'hover:bg-accent/50'
                           )}
                       >
@@ -228,7 +231,7 @@ function AdminPage() {
                                   </Button>
                               </div>
                           </div>
-                      </button>
+                      </div>
                   ))
                 )}
             </ScrollArea>
