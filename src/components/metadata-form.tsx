@@ -124,46 +124,24 @@ export function MetadataForm({
 }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      gender: recording.gender,
-      age: recording.age,
-      region: recording.region,
-      emotion: recording.emotion || 'neutral',
-      intensity: recording.intensity || 'normal',
-      textId: recording.textId || 'sentence_1',
-      personality: recording.personality || {
-        extrovert: false,
-        introvert: false,
-        optimistic: false,
-        emotional: false,
-        calm: false,
-        analytical: false,
-        leader: false,
-        compassionate: false,
-      },
-    },
     disabled: isReadOnly,
   });
 
   useEffect(() => {
-    form.reset({
-      gender: recording.gender,
-      age: recording.age,
-      region: recording.region,
-      emotion: recording.emotion || 'neutral',
-      intensity: recording.intensity || 'normal',
-      textId: recording.textId || 'sentence_1',
-      personality: recording.personality || {
-        extrovert: false,
-        introvert: false,
-        optimistic: false,
-        emotional: false,
-        calm: false,
-        analytical: false,
-        leader: false,
-        compassionate: false,
-      },
-    });
+    if (recording) {
+        form.reset({
+            gender: recording.gender,
+            age: recording.age,
+            region: recording.region,
+            emotion: recording.emotion || 'neutral',
+            intensity: recording.intensity || 'normal',
+            textId: recording.textId || 'sentence_1',
+            personality: recording.personality || {
+                extrovert: false, introvert: false, optimistic: false, emotional: false,
+                calm: false, analytical: false, leader: false, compassionate: false,
+            },
+        });
+    }
   }, [recording, form.reset]);
 
 
@@ -193,7 +171,7 @@ export function MetadataForm({
                   <FormControl>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       disabled={!isNewRecording || isReadOnly}
                     >
                       <SelectTrigger>
@@ -236,7 +214,7 @@ export function MetadataForm({
                   <FormLabel>Emotsiya</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                     disabled={isReadOnly}
                   >
                     <FormControl>
@@ -265,7 +243,7 @@ export function MetadataForm({
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="flex items-center space-x-4"
                       disabled={isReadOnly}
                     >
@@ -312,7 +290,7 @@ export function MetadataForm({
                     <FormLabel>Jinsi</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       disabled={isReadOnly}
                     >
                       <FormControl>
@@ -337,7 +315,7 @@ export function MetadataForm({
                     <FormLabel>Yoshi</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       disabled={isReadOnly}
                     >
                       <FormControl>
@@ -365,7 +343,7 @@ export function MetadataForm({
                     <FormLabel>Hudud</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       disabled={isReadOnly}
                     >
                       <FormControl>
@@ -395,7 +373,7 @@ export function MetadataForm({
             <CardDescription>
               Iltimos, o‘zingizga eng yaqin deb hisoblagan xususiyatlarni belgilang.
             </CardDescription>
-          </CardHeader>
+          </Header>
           <CardContent className="space-y-4">
             {personalityTraits.map((item) => (
               <FormField
