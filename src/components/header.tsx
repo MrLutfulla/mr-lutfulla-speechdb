@@ -1,14 +1,19 @@
 'use client';
 
-import { Waves, LogOut } from 'lucide-react';
-import { useAuth } from '@/firebase';
+import { Waves, LogOut, UserCog } from 'lucide-react';
+import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';
+import { isAdmin } from '@/lib/admins';
+import { useMemo } from 'react';
 
 export function Header() {
   const auth = useAuth();
+  const { user } = useUser();
   const router = useRouter();
+
+  const userIsAdmin = useMemo(() => (user ? isAdmin(user.uid) : false), [user]);
 
   const handleLogout = async () => {
     if (auth) {
@@ -25,10 +30,18 @@ export function Header() {
           MrL Speech craft
         </h1>
       </div>
-      <Button variant="ghost" onClick={handleLogout}>
-        <LogOut className="mr-2 h-4 w-4" />
-        Chiqish
-      </Button>
+      <div className="flex items-center gap-2">
+        {userIsAdmin && (
+          <Button onClick={() => router.push('/admin')} variant="secondary" size="sm">
+            <UserCog className="mr-2 h-4 w-4" />
+            Admin Paneli
+          </Button>
+        )}
+        <Button variant="ghost" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Chiqish
+        </Button>
+      </div>
     </header>
   );
 }

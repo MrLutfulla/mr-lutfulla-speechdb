@@ -14,6 +14,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 function AdminPage() {
   const { user, loading: userLoading } = useUser();
@@ -91,6 +94,14 @@ function AdminPage() {
       });
   }
 
+  const handleCopyUid = (uid: string) => {
+    navigator.clipboard.writeText(uid);
+    toast({
+      title: "Nusxa olindi",
+      description: "Foydalanuvchi UID'si vaqtinchalik xotiraga saqlandi.",
+    });
+  }
+
   const selectedUserRecordings = useMemo(() => {
     if (!selectedUserId) return [];
     return allRecordings.get(selectedUserId) || [];
@@ -127,19 +138,38 @@ function AdminPage() {
                         key={u.uid}
                         onClick={() => handleSelectUser(u.uid)}
                         className={cn(
-                            'w-full text-left p-3 transition-colors flex items-center gap-3',
+                            'w-full text-left p-3 transition-colors flex items-start gap-3 border-b',
                             selectedUserId === u.uid ? 'bg-accent' : 'hover:bg-accent/50'
                         )}
                     >
-                        <Avatar className='h-9 w-9'>
+                        <Avatar className='h-9 w-9 mt-1'>
                             <AvatarImage src={u.photoURL || ''} alt={u.displayName || 'User'}/>
                             <AvatarFallback>{u.displayName?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                         <div className='flex-1 truncate'>
-                            <p className='font-medium truncate'>{u.displayName || 'Noma\'lum'}</p>
+                            <p className='font-medium truncate flex items-center gap-2'>
+                                {u.displayName || 'Noma\'lum'}
+                                {isAdmin(u.uid) && <Badge variant="secondary">Admin</Badge>}
+                            </p>
                             <p className={cn('text-sm', selectedUserId === u.uid ? 'text-accent-foreground/80' : 'text-muted-foreground')}>
                                 {u.recordingCount || 0} yozuv
                             </p>
+                            <div className='flex items-center gap-2 mt-1'>
+                                <p className={cn('text-xs font-mono truncate', selectedUserId === u.uid ? 'text-accent-foreground/60' : 'text-muted-foreground/80')}>
+                                    {u.uid}
+                                </p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopyUid(u.uid);
+                                  }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                            </div>
                         </div>
                     </button>
                 ))}

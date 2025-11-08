@@ -5,7 +5,7 @@ import { Recording, NewRecordingMetadata, UserProfile } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
-import { Download, PlusCircle, Trash2, HardDriveUpload, UserCog } from "lucide-react";
+import { Download, PlusCircle, Trash2, HardDriveUpload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { NewRecording } from "@/components/new-recording";
 import JSZip from "jszip";
@@ -38,7 +38,6 @@ import {
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useRouter } from "next/navigation";
-import { isAdmin } from "@/lib/admins";
 
 /* ---------- Helper Functions ---------- */
 
@@ -75,7 +74,6 @@ export function SpeechCraftClient() {
   const router = useRouter();
 
   const isMobile = useIsMobile();
-  const userIsAdmin = useMemo(() => (user ? isAdmin(user.uid) : false), [user]);
 
   /* --- Mount: Load from Firestore --- */
   useEffect(() => {
@@ -355,12 +353,6 @@ export function SpeechCraftClient() {
             <Button onClick={handleExport} variant="outline" size="sm" disabled={recordings.length === 0}>
               <Download className="mr-2 h-4 w-4" /> Eksport
             </Button>
-            {userIsAdmin && (
-              <Button onClick={() => router.push('/admin')} variant="secondary" size="sm">
-                <UserCog className="mr-2 h-4 w-4" />
-                Admin
-              </Button>
-            )}
           </div>
         </div>
         <RecordingList
