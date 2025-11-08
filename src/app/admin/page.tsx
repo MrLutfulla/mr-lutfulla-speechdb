@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
-import { collectionGroup, onSnapshot, query, collection, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
 import { Loader2, Mic } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
@@ -22,9 +22,10 @@ function AdminPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingRecordings, setLoadingRecordings] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [allRecordings, setAllRecordings] = useState<Map<string, Recording[]>>(new Map());
+  const [userRecordings, setUserRecordings] = useState<Recording[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -35,51 +36,66 @@ function AdminPage() {
     }
   }, [user, userLoading, router]);
 
+  // Effect to load all users and their recording counts initially
   useEffect(() => {
     if (!firestore || !isAdmin(user?.uid || '')) return;
 
-    setLoading(true);
+    setLoadingUsers(true);
     const usersCollection = collection(firestore, 'users');
-    const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
-      const usersData = snapshot.docs.map(doc => ({...doc.data(), uid: doc.id} as UserProfile));
-      setUsers(usersData);
-    });
-    
-    const recordingsQuery = query(collectionGroup(firestore, 'recordings'), orderBy('createdAt', 'desc'));
-    const unsubscribeRecordings = onSnapshot(recordingsQuery, (snapshot) => {
-      const recordingsMap = new Map<string, Recording[]>();
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const recording = { 
-            ...data, 
-            id: doc.id,
-            createdAt: data.createdAt.toDate().toISOString(),
-        } as Recording;
-        const userId = doc.ref.parent.parent?.id;
-        if (userId) {
-          const userRecordings = recordingsMap.get(userId) || [];
-          userRecordings.push(recording);
-          recordingsMap.set(userId, userRecordings);
-        }
+    const unsubscribeUsers = onSnapshot(usersCollection, async (usersSnapshot) => {
+      const usersDataPromises = usersSnapshot.docs.map(async (userDoc) => {
+        const recordingsCollection = collection(firestore, 'users', userDoc.id, 'recordings');
+        const recordingsSnapshot = await getDocs(recordingsCollection);
+        return {
+          ...(userDoc.data() as Omit<UserProfile, 'uid'>),
+          uid: userDoc.id,
+          recordingCount: recordingsSnapshot.size,
+        };
       });
-
-      // Update recording counts on users
-      setUsers(prevUsers => prevUsers.map(u => ({...u, recordingCount: recordingsMap.get(u.uid)?.length || 0})))
-
-      setAllRecordings(recordingsMap);
-      setLoading(false);
+      const usersData = await Promise.all(usersDataPromises);
+      setUsers(usersData);
+      setLoadingUsers(false);
     });
 
-
-    return () => {
-      unsubscribeUsers();
-      unsubscribeRecordings();
-    };
+    return () => unsubscribeUsers();
   }, [firestore, user]);
+
+  // Effect to load recordings when a user is selected
+  useEffect(() => {
+    if (!firestore || !selectedUserId) {
+        setUserRecordings([]);
+        return;
+    }
+
+    setLoadingRecordings(true);
+    const recordingsCollection = collection(firestore, 'users', selectedUserId, 'recordings');
+    const q = query(recordingsCollection, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const recordingsData = snapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id,
+            createdAt: doc.data().createdAt.toDate().toISOString(),
+        } as Recording));
+        setUserRecordings(recordingsData);
+        setLoadingRecordings(false);
+    }, (error) => {
+        console.error(`Error fetching recordings for user ${selectedUserId}:`, error);
+        toast({
+            title: "Xatolik",
+            description: "Foydalanuvchi yozuvlarini yuklab bo'lmadi.",
+            variant: "destructive"
+        });
+        setLoadingRecordings(false);
+    });
+
+    return () => unsubscribe();
+  }, [firestore, selectedUserId, toast]);
+
 
   const handleSelectUser = (uid: string) => {
     setSelectedUserId(uid);
-    setSelectedRecordingId(null); // Reset recording selection when user changes
+    setSelectedRecordingId(null);
   };
   
   const handleSelectRecording = (id: string) => {
@@ -101,17 +117,12 @@ function AdminPage() {
       description: "Foydalanuvchi UID'si vaqtinchalik xotiraga saqlandi.",
     });
   }
-
-  const selectedUserRecordings = useMemo(() => {
-    if (!selectedUserId) return [];
-    return allRecordings.get(selectedUserId) || [];
-  }, [selectedUserId, allRecordings]);
-
+  
   const selectedRecording = useMemo(() => {
-    return selectedUserRecordings.find(r => r.id === selectedRecordingId);
-  }, [selectedRecordingId, selectedUserRecordings]);
+    return userRecordings.find(r => r.id === selectedRecordingId);
+  }, [selectedRecordingId, userRecordings]);
 
-  if (userLoading || loading) {
+  if (userLoading || loadingUsers) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -183,10 +194,10 @@ function AdminPage() {
           </div>
           {selectedUserId ? (
             <RecordingList 
-                recordings={selectedUserRecordings} 
+                recordings={userRecordings} 
                 selectedRecordingId={selectedRecordingId}
                 onSelectRecording={handleSelectRecording}
-                loading={loading}
+                loading={loadingRecordings}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-center text-muted-foreground p-4">

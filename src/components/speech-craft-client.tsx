@@ -34,7 +34,8 @@ import {
   deleteDoc, 
   Timestamp,
   query,
-  orderBy
+  orderBy,
+  getCountFromServer
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useRouter } from "next/navigation";
@@ -134,10 +135,10 @@ export function SpeechCraftClient() {
     toast({ title: "Saqlanmoqda...", description: "Yozuvingiz serverga yuklanmoqda." });
 
     try {
-      const nextIdNumber = recordings.length > 0
-        ? Math.max(...recordings.map(r => parseInt(r.speakerId.split('_')[1] || '0'))) + 1
-        : 1;
-
+      const recordingsCollection = collection(firestore, 'users', user.uid, 'recordings');
+      const snapshot = await getCountFromServer(recordingsCollection);
+      const nextIdNumber = snapshot.data().count + 1;
+      
       const speakerId = `UZ_${String(nextIdNumber).padStart(2, '0')}`;
       const recordingId = `${speakerId}_${metadata.textId}_${metadata.emotion}_${Date.now()}`;
       
@@ -150,18 +151,17 @@ export function SpeechCraftClient() {
       const audioUrl = await getDownloadURL(storageRef);
 
       // 2. Save metadata to Firestore
-      const recordingsCollection = collection(firestore, 'users', user.uid, 'recordings');
       const newRecordingDoc: Omit<Recording, 'id' | 'createdAt'> = {
         audioUrl,
         storagePath,
         speakerId,
         textId: metadata.textId,
         emotion: metadata.emotion,
-        intensity: "normal",
-        gender: "male",
-        age: "18 yoshgacha",
-        region: "toshkent",
-        personality: {
+        intensity: "normal", // Default value
+        gender: "male", // Default value
+        age: "18-25", // Default value
+        region: "toshkent", // Default value
+        personality: { // Default value
           extrovert: false, introvert: false, optimistic: false, emotional: false,
           calm: false, analytical: false, leader: false, compassionate: false,
         },
