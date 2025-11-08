@@ -1,7 +1,7 @@
 'use client';
 
 interface AudioPlayerProps {
-  audioUrl: string;
+  audioUrl: string; // Now this will be a base64 data URL
 }
 
 export function AudioPlayer({ audioUrl }: AudioPlayerProps) {

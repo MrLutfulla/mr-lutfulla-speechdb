@@ -15,8 +15,7 @@ export interface PersonalityTraits {
 
 export interface Recording {
   id: string;
-  audioUrl: string;
-  storagePath: string;
+  audioBase64: string; // Changed from audioUrl and storagePath
   speakerId: string;
   createdAt: string | Timestamp;
   emotion: string;
@@ -33,7 +32,7 @@ export type NewRecordingMetadata = {
   textId: string;
 };
 
-// This type is no longer needed as we are not using localStorage
+// This type is no longer needed
 export interface StoredRecording {
   id: string;
   speakerId: string;

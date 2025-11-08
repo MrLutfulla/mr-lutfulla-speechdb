@@ -85,7 +85,7 @@ export function RecordingDetails({
         )}
       </div>
 
-      <AudioPlayer audioUrl={recording.audioUrl} />
+      <AudioPlayer audioUrl={recording.audioBase64} />
 
       <MetadataForm 
         recording={recording} 

@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Recording, NewRecordingMetadata, UserProfile } from "@/lib/types";
+import { Recording, NewRecordingMetadata } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,6 @@ import { Download, PlusCircle, Trash2, HardDriveUpload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { NewRecording } from "@/components/new-recording";
 import JSZip from "jszip";
-import WavEncoder from "wav-encoder";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -37,28 +37,30 @@ import {
   orderBy,
   getCountFromServer
 } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { useRouter } from "next/navigation";
 
 /* ---------- Helper Functions ---------- */
 
-async function convertWebmToWav(webmBlob: Blob): Promise<Blob> {
-  try {
-    const audioContext = new AudioContext({ sampleRate: 48000 });
-    const arrayBuffer = await webmBlob.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    const wavBuffer = await WavEncoder.encode({
-      sampleRate: 48000,
-      channelData: Array.from({ length: audioBuffer.numberOfChannels }, (_, i) =>
-        audioBuffer.getChannelData(i)
-      ),
-    });
-    return new Blob([wavBuffer], { type: "audio/wav" });
-  } catch (error) {
-    console.error("Failed to convert WebM to WAV:", error);
-    throw error;
-  }
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
+
+function base64ToBlob(base64: string): Blob {
+    const [header, data] = base64.split(',');
+    const mime = header.match(/:(.*?);/)?.[1];
+    const bstr = atob(data);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
+
 
 /* ---------- Main Component ---------- */
 
@@ -70,9 +72,8 @@ export function SpeechCraftClient() {
   const [view, setView] = useState<'list' | 'new' | 'details'>('list');
   const [loading, setLoading] = useState(true);
   
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
 
   const isMobile = useIsMobile();
 
@@ -136,25 +137,17 @@ export function SpeechCraftClient() {
 
     try {
       const recordingsCollection = collection(firestore, 'users', user.uid, 'recordings');
-      const snapshot = await getCountFromServer(recordingsCollection);
-      const nextIdNumber = snapshot.data().count + 1;
       
-      const speakerId = `UZ_${String(nextIdNumber).padStart(2, '0')}`;
-      const recordingId = `${speakerId}_${metadata.textId}_${metadata.emotion}_${Date.now()}`;
-      
-      // 1. Upload audio file to Firebase Storage
-      const storage = getStorage();
-      const storagePath = `recordings/${user.uid}/${recordingId}.wav`;
-      const storageRef = ref(storage, storagePath);
-      const wavBlob = await convertWebmToWav(audioBlob);
-      await uploadBytes(storageRef, wavBlob);
-      const audioUrl = await getDownloadURL(storageRef);
+      const audioBase64 = await blobToBase64(audioBlob);
+      if (audioBase64.length > 1048576) {
+          toast({ title: "Xatolik", description: "Ovoz yozuvi juda katta. Iltimos, qisqaroq yozuv yarating (taxminan 1 daqiqagacha).", variant: "destructive" });
+          return;
+      }
 
-      // 2. Save metadata to Firestore
+      // 2. Save metadata and audio to Firestore
       const newRecordingDoc: Omit<Recording, 'id' | 'createdAt'> = {
-        audioUrl,
-        storagePath,
-        speakerId,
+        audioBase64,
+        speakerId: `UZ_01`, // Default value
         textId: metadata.textId,
         emotion: metadata.emotion,
         intensity: "normal", // Default value
@@ -210,12 +203,7 @@ export function SpeechCraftClient() {
     toast({ title: "O'chirilmoqda..." });
 
     try {
-      // 1. Delete file from Storage
-      const storage = getStorage();
-      const storageRef = ref(storage, recordingToDelete.storagePath);
-      await deleteObject(storageRef);
-
-      // 2. Delete doc from Firestore
+      // Delete doc from Firestore
       const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
       await deleteDoc(docRef);
 
@@ -235,7 +223,6 @@ export function SpeechCraftClient() {
 
     toast({ title: "Barcha yozuvlar o'chirilmoqda..." });
 
-    // This is a batch operation, proceed with caution.
     const deletePromises = recordings.map(rec => handleDeleteRecording(rec.id));
     try {
       await Promise.all(deletePromises);
@@ -270,19 +257,17 @@ export function SpeechCraftClient() {
       const metadata: any[] = [];
 
       for (const rec of recordings) {
-        const fileName = `${rec.id.replace(/[^a-zA-Z0-9_.-]/g, '_')}.wav`;
-        const { audioUrl, storagePath, createdAt, ...rest } = rec;
+        const fileName = `${rec.id.replace(/[^a-zA-Z0-9_.-]/g, '_')}.webm`;
+        const { audioBase64, createdAt, ...rest } = rec;
         
         metadata.push({ 
           ...rest, 
-          createdAt: (createdAt as string), // Already a string
+          createdAt: (createdAt as string),
           fileName 
         });
 
-        const response = await fetch(audioUrl);
-        const wavBlob = await response.blob();
-        
-        zip.file(fileName, wavBlob);
+        const audioBlob = base64ToBlob(audioBase64);
+        zip.file(fileName, audioBlob);
       }
 
       zip.file("metadata.json", JSON.stringify(metadata, null, 2));
@@ -317,7 +302,7 @@ export function SpeechCraftClient() {
     [recordings, selectedRecordingId]
   );
   
-  if (!isClient || userLoading) return <div className="w-full h-screen bg-background" />;
+  if (!isClient) return <div className="w-full h-screen bg-background" />;
 
   const showList = !isMobile || (isMobile && view === 'list');
   const showDetails = !isMobile || (isMobile && (view === 'details' || view === 'new'));

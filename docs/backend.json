@@ -35,14 +35,9 @@
       "description": "Represents a single audio recording and its metadata.",
       "type": "object",
       "properties": {
-        "audioUrl": {
+        "audioBase64": {
           "type": "string",
-          "format": "uri",
-          "description": "Public URL to the audio file in Cloud Storage."
-        },
-        "storagePath": {
-            "type": "string",
-            "description": "The path to the audio file in Cloud Storage."
+          "description": "Base64 encoded audio data."
         },
         "speakerId": {
           "type": "string",
@@ -92,8 +87,7 @@
         }
       },
       "required": [
-        "audioUrl",
-        "storagePath",
+        "audioBase64",
         "speakerId",
         "createdAt",
         "emotion",
@@ -112,7 +106,7 @@
     },
     "/users/{userId}/recordings/{recordingId}": {
       "schema": { "$ref": "#/backend/entities/Recording" },
-      "description": "Stores audio recording metadata for a specific user. The actual audio is in Cloud Storage."
+      "description": "Stores audio recording metadata for a specific user."
     }
   }
 }
