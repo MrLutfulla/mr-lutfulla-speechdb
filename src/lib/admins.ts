@@ -1,6 +1,10 @@
 // Add the UIDs of users who should have admin access.
+// 1. Sign up for a new account in the app.
+// 2. Go to Firebase Console > Authentication > Users.
+// 3. Copy the "User UID" for your account.
+// 4. Paste it into this array.
 const ADMIN_UIDS = [
-    "gXq4cEaN9yYt2zR7wXp9sFv1qHj2", // Replace with your actual admin user UID
+    "REPLACE_WITH_YOUR_ADMIN_UID", // O'zingizning admin UID'ingiz bilan almashtiring
 ];
 
 export function isAdmin(uid: string): boolean {

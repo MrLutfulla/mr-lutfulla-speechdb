@@ -13,6 +13,7 @@ import { RecordingDetails } from '@/components/recording-details';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 function AdminPage() {
   const { user, loading: userLoading } = useUser();
@@ -23,6 +24,7 @@ function AdminPage() {
   const [allRecordings, setAllRecordings] = useState<Map<string, Recording[]>>(new Map());
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!userLoading && !isAdmin(user?.uid || '')) {
@@ -79,6 +81,14 @@ function AdminPage() {
   
   const handleSelectRecording = (id: string) => {
     setSelectedRecordingId(id);
+  }
+  
+  const showReadOnlyToast = () => {
+      toast({
+        variant: "destructive",
+        title: "Ruxsat yo'q",
+        description: "Admin bu amalni bajara olmaydi. Yozuvlar faqat ko'rish uchun.",
+      });
   }
 
   const selectedUserRecordings = useMemo(() => {
@@ -163,8 +173,8 @@ function AdminPage() {
                      <RecordingDetails
                         key={selectedRecording.id}
                         recording={selectedRecording}
-                        onUpdateRecording={() => {}} // Admin cannot update
-                        onDeleteRecording={() => {}} // Admin cannot delete
+                        onUpdateRecording={showReadOnlyToast}
+                        onDeleteRecording={showReadOnlyToast}
                         onClearSelection={() => setSelectedRecordingId(null)}
                         isReadOnly={true}
                     />
@@ -184,5 +194,3 @@ function AdminPage() {
 }
 
 export default AdminPage;
-
-    
