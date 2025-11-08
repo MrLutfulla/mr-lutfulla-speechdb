@@ -87,7 +87,6 @@ const personalityTraits: { id: keyof PersonalityTraits; label: string, descripti
     { id: 'compassionate', label: 'Rahmdil', description: 'boshqalarga yordam berishni yoqtiradi' },
 ];
 
-// speakerId is removed from the form schema as it's now auto-generated
 const formSchema = z.object({
   gender: z.enum(['male', 'female'], { required_error: 'Jinsini tanlang' }),
   age: z.string({ required_error: 'Yoshni tanlang' }),
@@ -124,7 +123,6 @@ export function MetadataForm({
 }: MetadataFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    disabled: isReadOnly,
     defaultValues: {
         gender: recording.gender || 'male',
         age: recording.age || '18-25',
@@ -136,24 +134,23 @@ export function MetadataForm({
             extrovert: false, introvert: false, optimistic: false, emotional: false,
             calm: false, analytical: false, leader: false, compassionate: false,
         },
-    }
+    },
+    disabled: isReadOnly,
   });
-
+  
   useEffect(() => {
-    if (recording) {
-        form.reset({
-            gender: recording.gender,
-            age: recording.age,
-            region: recording.region,
-            emotion: recording.emotion || 'neutral',
-            intensity: recording.intensity || 'normal',
-            textId: recording.textId || 'sentence_1',
-            personality: recording.personality || {
-                extrovert: false, introvert: false, optimistic: false, emotional: false,
-                calm: false, analytical: false, leader: false, compassionate: false,
-            },
-        });
-    }
+    form.reset({
+        gender: recording.gender || 'male',
+        age: recording.age || '18-25',
+        region: recording.region || 'toshkent',
+        emotion: recording.emotion || 'neutral',
+        intensity: recording.intensity || 'normal',
+        textId: recording.textId || 'sentence_1',
+        personality: recording.personality || {
+            extrovert: false, introvert: false, optimistic: false, emotional: false,
+            calm: false, analytical: false, leader: false, compassionate: false,
+        },
+    });
   }, [recording, form.reset]);
 
 
@@ -307,7 +304,7 @@ export function MetadataForm({
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Jinsini tanlang..." />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="male">Erkak</SelectItem>
@@ -420,5 +417,3 @@ export function MetadataForm({
     </Form>
   );
 }
-
-    
