@@ -1,33 +1,52 @@
 'use client';
 
 import { useAuth, useUser } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Waves } from 'lucide-react';
+import { Waves, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const auth = useAuth();
-  const { user, loading } = useUser();
+  const { user, loading: userLoading } = useUser();
   const router = useRouter();
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/');
+    if (userLoading) {
+      // Wait for user status to be determined
+      return;
     }
-  }, [user, loading, router]);
+    if (user) {
+      router.push('/');
+      return;
+    }
+    // If not logged in and not loading, check for redirect result
+    if (auth) {
+      setIsSigningIn(true);
+      getRedirectResult(auth)
+        .then((result) => {
+          if (result?.user) {
+            router.push('/');
+          }
+        })
+        .catch((error) => {
+          console.error('Error getting redirect result: ', error);
+        })
+        .finally(() => {
+           setIsSigningIn(false);
+        });
+    }
+  }, [user, userLoading, auth, router]);
 
   const handleGoogleSignIn = async () => {
     if (!auth) return;
+    setIsSigningIn(true);
     const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      router.push('/');
-    } catch (error) {
-      console.error('Error signing in with Google: ', error);
-    }
+    // Instead of popup, we use redirect
+    await signInWithRedirect(auth, provider);
   };
   
   const GoogleIcon = () => (
@@ -39,10 +58,10 @@ export default function LoginPage() {
     </svg>
   );
 
-  if (loading || user) {
+  if (userLoading || isSigningIn || user) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        {/* You can show a loading spinner here */}
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
@@ -61,8 +80,12 @@ export default function LoginPage() {
           <CardDescription>Davom etish uchun hisobingizga kiring</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleGoogleSignIn} className="w-full" variant="outline">
-            <GoogleIcon />
+          <Button onClick={handleGoogleSignIn} className="w-full" variant="outline" disabled={isSigningIn}>
+            {isSigningIn ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <GoogleIcon />
+            )}
             Google orqali kirish
           </Button>
         </CardContent>
