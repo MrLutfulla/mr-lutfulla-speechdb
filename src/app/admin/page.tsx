@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
-import { collection, onSnapshot, query, orderBy, getDocs, Timestamp, getCountFromServer } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { Loader2, Mic } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
@@ -34,12 +35,14 @@ function AdminPage() {
 
   // Redirect non-admins
   useEffect(() => {
-    if (!userLoading && !userIsAdmin) {
+    if (!userLoading && !user) {
+      router.push('/');
+    } else if (!userLoading && user && !isAdmin(user.uid)){
       router.push('/');
     }
-  }, [user, userLoading, userIsAdmin, router]);
+  }, [user, userLoading, router]);
 
-  // Effect to load all users
+  // Effect to load all users in real-time
   useEffect(() => {
     if (!firestore || !userIsAdmin) {
       if(!userLoading) setLoadingUsers(false);
@@ -49,25 +52,12 @@ function AdminPage() {
     setLoadingUsers(true);
     const usersCollection = collection(firestore, 'users');
     const unsubscribeUsers = onSnapshot(usersCollection, async (usersSnapshot) => {
-      const usersDataPromises = usersSnapshot.docs.map(async (userDoc) => {
-        const userProfile = {
+      const usersData = usersSnapshot.docs.map((userDoc) => {
+        return {
           ...(userDoc.data() as Omit<UserProfile, 'uid'>),
           uid: userDoc.id,
-          recordingCount: 0, // Default to 0
-        };
-
-        // Efficiently get recording count
-        try {
-          const recordingsCollection = collection(firestore, 'users', userDoc.id, 'recordings');
-          const snapshot = await getCountFromServer(recordingsCollection);
-          userProfile.recordingCount = snapshot.data().count;
-        } catch (error) {
-          console.error(`Failed to get recording count for user ${userDoc.id}:`, error);
-        }
-
-        return userProfile;
+        } as UserProfile;
       });
-      const usersData = await Promise.all(usersDataPromises);
       setUsers(usersData);
       setLoadingUsers(false);
     }, (error) => {
@@ -97,7 +87,6 @@ function AdminPage() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const recordingsData = snapshot.docs.map(doc => {
             const data = doc.data();
-            // Handle both Timestamp and ISO string formats for createdAt
             let createdAt: string;
             if (data.createdAt instanceof Timestamp) {
                 createdAt = data.createdAt.toDate().toISOString();

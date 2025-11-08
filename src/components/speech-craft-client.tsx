@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Recording, NewRecordingMetadata } from "@/lib/types";
+import { Recording, NewRecordingMetadata, UserProfile } from "@/lib/types";
 import { RecordingList } from "@/components/recording-list";
 import { RecordingDetails } from "@/components/recording-details";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,8 @@ import {
   Timestamp,
   query,
   orderBy,
-  getCountFromServer
+  getCountFromServer,
+  runTransaction
 } from "firebase/firestore";
 
 /* ---------- Helper Functions ---------- */
@@ -89,10 +90,14 @@ export function SpeechCraftClient() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const loaded: Recording[] = snapshot.docs.map(doc => {
         const data = doc.data();
-        // Handle both Timestamp and ISO string formats for createdAt
-        const createdAt = data.createdAt instanceof Timestamp 
-          ? data.createdAt.toDate().toISOString() 
-          : data.createdAt;
+        let createdAt: string;
+        if (data.createdAt instanceof Timestamp) {
+            createdAt = data.createdAt.toDate().toISOString();
+        } else if (typeof data.createdAt === 'string') {
+            createdAt = data.createdAt;
+        } else {
+            createdAt = new Date().toISOString(); // Fallback
+        }
         return {
           ...data,
           id: doc.id,
@@ -135,39 +140,61 @@ export function SpeechCraftClient() {
     audioBlob: Blob,
     metadata: NewRecordingMetadata
   ) => {
-    if (!user || !firestore) return;
+     if (!user || !firestore) return;
 
     toast({ title: "Saqlanmoqda...", description: "Yozuvingiz serverga yuklanmoqda." });
 
     try {
-      const recordingsCollection = collection(firestore, 'users', user.uid, 'recordings');
-      
       const audioBase64 = await blobToBase64(audioBlob);
       if (audioBase64.length > 1048576) {
           toast({ title: "Xatolik", description: "Ovoz yozuvi juda katta. Iltimos, qisqaroq yozuv yarating (taxminan 1 daqiqagacha).", variant: "destructive" });
           return;
       }
+      
+      const userRef = doc(firestore, 'users', user.uid);
+      const recordingsCollection = collection(userRef, 'recordings');
 
-      // 2. Save metadata and audio to Firestore
-      const newRecordingDoc: Omit<Recording, 'id' | 'createdAt'> = {
-        audioBase64,
-        speakerId: `UZ_01`, // Default value
-        textId: metadata.textId,
-        emotion: metadata.emotion,
-        intensity: "normal", // Default value
-        gender: "male", // Default value
-        age: "18-25", // Default value
-        region: "toshkent", // Default value
-        personality: { // Default value
-          extrovert: false, introvert: false, optimistic: false, emotional: false,
-          calm: false, analytical: false, leader: false, compassionate: false,
-        },
-      };
+      const docRef = await runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw "Foydalanuvchi profili topilmadi!";
+        }
 
-      const docRef = await addDoc(recordingsCollection, {
-        ...newRecordingDoc,
-        createdAt: Timestamp.now(),
+        const userProfile = userDoc.data() as UserProfile;
+        const currentRecordingCount = userProfile.recordingCount || 0;
+        const newRecordingCount = currentRecordingCount + 1;
+
+        const speakerName = userProfile.displayName?.replace(/\s+/g, '_') || 'User';
+        const speakerId = `${speakerName}_${newRecordingCount.toString().padStart(2, '0')}`;
+        
+        const newRecordingDoc: Omit<Recording, 'id' | 'createdAt'> = {
+          audioBase64,
+          speakerId,
+          textId: metadata.textId,
+          emotion: metadata.emotion,
+          intensity: "normal",
+          gender: "male",
+          age: "18-25",
+          region: "toshkent",
+          personality: {
+            extrovert: false, introvert: false, optimistic: false, emotional: false,
+            calm: false, analytical: false, leader: false, compassionate: false,
+          },
+        };
+        
+        // Add the new recording document
+        const newDocRef = doc(recordingsCollection); // Create a new doc reference with a generated ID
+        transaction.set(newDocRef, {
+            ...newRecordingDoc,
+            createdAt: Timestamp.now(),
+        });
+        
+        // Update the recording count on the user's profile
+        transaction.update(userRef, { recordingCount: newRecordingCount });
+
+        return newDocRef;
       });
+
 
       setSelectedRecordingId(docRef.id);
       setView('details');
@@ -175,7 +202,7 @@ export function SpeechCraftClient() {
 
     } catch (error) {
       console.error("Error adding recording:", error);
-      toast({ title: "Xatolik", description: "Yozuvni saqlashda xato yuz berdi.", variant: "destructive" });
+      toast({ title: "Xatolik", description: `Yozuvni saqlashda xato yuz berdi: ${error}`, variant: "destructive" });
     }
   };
 
@@ -213,15 +240,26 @@ export function SpeechCraftClient() {
   const handleDeleteRecording = async (id: string) => {
     if (!user || !firestore) return;
     
-    const recordingToDelete = recordings.find(r => r.id === id);
-    if (!recordingToDelete) return;
-
     toast({ title: "O'chirilmoqda..." });
 
     try {
-      // Delete doc from Firestore
-      const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
-      await deleteDoc(docRef);
+      const userRef = doc(firestore, 'users', user.uid);
+      const recordingRef = doc(userRef, 'recordings', id);
+
+      await runTransaction(firestore, async (transaction) => {
+          const userDoc = await transaction.get(userRef);
+          if (!userDoc.exists()) {
+              throw "Foydalanuvchi profili topilmadi!";
+          }
+
+          // Delete the recording
+          transaction.delete(recordingRef);
+
+          // Decrement the recording count
+          const currentCount = userDoc.data().recordingCount || 0;
+          transaction.update(userRef, { recordingCount: Math.max(0, currentCount - 1) });
+      });
+
 
       if (selectedRecordingId === id) handleClearSelection();
       toast({
@@ -230,7 +268,7 @@ export function SpeechCraftClient() {
       });
     } catch (error) {
       console.error("Error deleting recording:", error);
-      toast({ title: "Xatolik", description: "Yozuvni o'chirishda xato yuz berdi.", variant: "destructive" });
+      toast({ title: "Xatolik", description: `Yozuvni o'chirishda xato yuz berdi: ${error}`, variant: "destructive" });
     }
   };
 
@@ -238,15 +276,27 @@ export function SpeechCraftClient() {
     if (!user || !firestore) return;
 
     toast({ title: "Barcha yozuvlar o'chirilmoqda..." });
-
-    const deletePromises = recordings.map(rec => handleDeleteRecording(rec.id));
+    
     try {
-      await Promise.all(deletePromises);
-      handleClearSelection();
-      toast({
-        title: 'Barcha yozuvlar o‘chirildi',
-        description: 'Barcha saqlangan ma’lumotlar tozalandi.',
-      });
+        const userRef = doc(firestore, 'users', user.uid);
+        const recordingsRef = collection(userRef, 'recordings');
+        
+        // Firestore doesn't have a direct batch delete for subcollections without reading all docs.
+        // We iterate and delete. For very large collections, a backend function would be better.
+        const q = query(recordingsRef);
+        const snapshot = await getDocs(q);
+        const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+        
+        await Promise.all(deletePromises);
+
+        // After deleting all, reset count to 0.
+        await updateDoc(userRef, { recordingCount: 0 });
+
+        handleClearSelection();
+        toast({
+            title: 'Barcha yozuvlar o‘chirildi',
+            description: 'Barcha saqlangan ma’lumotlar tozalandi.',
+        });
     } catch (error) {
        console.error("Error clearing all recordings:", error);
        toast({ title: "Xatolik", description: "Yozuvlarni o'chirishda xato yuz berdi.", variant: "destructive" });
@@ -273,7 +323,7 @@ export function SpeechCraftClient() {
       const metadata: any[] = [];
 
       for (const rec of recordings) {
-        const fileName = `${rec.id.replace(/[^a-zA-Z0-9_.-]/g, '_')}.webm`;
+        const fileName = `${rec.speakerId.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${rec.id}.webm`;
         const { audioBase64, createdAt, ...rest } = rec;
         
         metadata.push({ 

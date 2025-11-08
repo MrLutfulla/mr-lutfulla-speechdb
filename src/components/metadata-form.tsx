@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -86,8 +87,8 @@ const personalityTraits: { id: keyof PersonalityTraits; label: string, descripti
     { id: 'compassionate', label: 'Rahmdil', description: 'boshqalarga yordam berishni yoqtiradi' },
 ];
 
+// speakerId is removed from the form schema as it's now auto-generated
 const formSchema = z.object({
-  speakerId: z.string().min(1, 'Ishtirokchi ID kiritilishi shart.'),
   gender: z.enum(['male', 'female'], { required_error: 'Jinsini tanlang' }),
   age: z.string({ required_error: 'Yoshni tanlang' }),
   region: z.string({ required_error: 'Hududni tanlang' }),
@@ -124,7 +125,6 @@ export function MetadataForm({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      speakerId: recording.speakerId || '',
       gender: recording.gender,
       age: recording.age,
       region: recording.region,
@@ -147,7 +147,6 @@ export function MetadataForm({
 
   useEffect(() => {
     form.reset({
-      speakerId: recording.speakerId || '',
       gender: recording.gender,
       age: recording.age,
       region: recording.region,
@@ -165,7 +164,7 @@ export function MetadataForm({
         compassionate: false,
       },
     });
-  }, [recording]);
+  }, [recording, form.reset]);
 
 
   function onSubmit(values: FormValues) {
@@ -298,25 +297,12 @@ export function MetadataForm({
         <Card>
           <CardHeader>
             <CardTitle>Ishtirokchi ma'lumotlari (Speaker Metadata)</CardTitle>
+            <CardDescription>
+              Bu ma'lumotlar avtomatik to'ldirilmaydi, o'zingiz kiriting.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <FormField
-              control={form.control}
-              name="speakerId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ishtirokchi ID</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. UZ_01"
-                      {...field}
-                      disabled={isReadOnly}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* speakerId field is removed */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
