@@ -18,8 +18,26 @@ export default function Home() {
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+      return;
     }
-    // Logic to create user profile is now in signup page
+
+    // Ensure user profile exists in Firestore
+    if (user && firestore) {
+      const userRef = doc(firestore, 'users', user.uid);
+      getDoc(userRef).then(docSnap => {
+        if (!docSnap.exists()) {
+          // If profile doesn't exist, create it.
+          const userData: Partial<UserProfile> = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            recordingCount: 0,
+          };
+          setDoc(userRef, userData, { merge: true });
+        }
+      });
+    }
   }, [user, loading, router, firestore]);
 
   if (loading || !user) {
