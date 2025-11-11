@@ -103,10 +103,8 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Parol</Label>
-                 <Link href="/forgot-password" passHref legacyBehavior>
-                    <a className="text-sm text-primary hover:underline">
-                        Parol esingizdan chiqdimi?
-                    </a>
+                 <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                    Parol esingizdan chiqdimi?
                 </Link>
               </div>
               <Input
