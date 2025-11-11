@@ -101,7 +101,14 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Parol</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Parol</Label>
+                 <Link href="/forgot-password" passHref legacyBehavior>
+                    <a className="text-sm text-primary hover:underline">
+                        Parol esingizdan chiqdimi?
+                    </a>
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
