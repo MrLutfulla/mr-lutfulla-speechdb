@@ -180,7 +180,7 @@ export function MetadataForm({
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
-                      disabled={!isNewRecording || isReadOnly}
+                      disabled={!isNewRecording}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Matnni tanlang..." />
@@ -416,3 +416,5 @@ export function MetadataForm({
     </Form>
   );
 }
+
+    
