@@ -80,15 +80,19 @@ export function SpeechCraftClient() {
   
   // Reset view on screen size change or when selections are cleared
   useEffect(() => {
-      if (isMobile) {
-          if (view === 'details' && !selectedRecordingId) {
-              setView('list');
-          }
-      } else {
-          // On desktop, the view logic is simpler, mostly handled by layout
-          if (view === 'new') setView('new');
-          else setView('list');
-      }
+    if (isMobile) {
+        // On mobile, if a recording was selected, stay on details. If not, go to list.
+        if (view === 'details' && !selectedRecordingId) {
+            setView('list');
+        }
+    } else {
+        // On desktop, the view logic is simpler. If we are in 'new' mode, stay there.
+        // Otherwise, default to 'list' view which shows list and details side-by-side.
+        // The selection of a recording will determine if details are shown.
+        if (view !== 'new') {
+           setView('list');
+        }
+    }
   }, [isMobile, selectedRecordingId, view]);
 
 
@@ -141,7 +145,7 @@ export function SpeechCraftClient() {
 
   const handleSelectRecording = (id: string) => {
     setSelectedRecordingId(id);
-    setView('details');
+    setView('details'); // Always switch to details view on selection
   };
 
   const handleShowNewRecording = () => {
@@ -378,7 +382,7 @@ export function SpeechCraftClient() {
   if (!isClient) return <div className="w-full h-screen bg-background" />;
 
   const showList = !isMobile || (isMobile && view === 'list');
-  const showDetails = !isMobile || (isMobile && (view === 'details' || view === 'new'));
+  const showNewOrDetails = !isMobile || (isMobile && (view === 'details' || view === 'new'));
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -426,7 +430,7 @@ export function SpeechCraftClient() {
         </div>
       </div>
 
-       <main className={cn("flex-1", showDetails ? "block" : "hidden md:block")}>
+       <main className={cn("flex-1", showNewOrDetails ? "block" : "hidden md:block")}>
         <ScrollArea className="h-full">
          <div className="p-4 md:p-8">
             {view === 'new' && (
@@ -442,7 +446,7 @@ export function SpeechCraftClient() {
                 isReadOnly={false}
               />
             )}
-            {view === 'list' && !selectedRecording && (
+            {(view === 'list' || (view === 'details' && !selectedRecording)) && (
                <div className="hidden md:flex h-full flex-col items-center justify-center bg-background text-muted-foreground p-8 min-h-[calc(100vh-10rem)]">
                   <HardDriveUpload className="w-16 h-16 mb-4 text-muted-foreground/50" />
                   <h2 className="text-xl font-medium">Yozuvni tanlang</h2>

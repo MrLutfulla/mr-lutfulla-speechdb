@@ -166,246 +166,242 @@ export function MetadataForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Matn (Context)</CardTitle>
-          </CardHeader>
-          <CardContent>
-             <FormField
-              control={form.control}
-              name="textId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={!isNewRecording}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Matnni tanlang..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {texts.map((text) => (
-                          <SelectItem key={text.id} value={text.id}>
-                            {text.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {selectedText && (
-              <div className="mt-4 p-4 border-l-4 border-primary bg-primary/10">
-                <p className="font-mono text-lg">"{selectedText}"</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Emotsiya va Intensivlik</CardTitle>
-            <CardDescription>
-              Yozuv uchun emotsiya va uning darajasini tanlang.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <FormField
-              control={form.control}
-              name="emotion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Emotsiya</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isReadOnly}
-                  >
+        <fieldset disabled={isReadOnly}>
+            <Card>
+            <CardHeader>
+                <CardTitle>Matn (Context)</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <FormField
+                control={form.control}
+                name="textId"
+                render={({ field }) => (
+                    <FormItem>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Emotsiyani tanlang..." />
-                      </SelectTrigger>
+                        <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!isNewRecording}
+                        >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Matnni tanlang..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {texts.map((text) => (
+                            <SelectItem key={text.id} value={text.id}>
+                                {text.label}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
                     </FormControl>
-                    <SelectContent>
-                      {emotions.map((emotion) => (
-                        <SelectItem key={emotion.id} value={emotion.id}>
-                          {emotion.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="intensity"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Intensivlik</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex items-center space-x-4"
-                      disabled={isReadOnly}
-                    >
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="normal" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Oddiy (Normal)
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="strong" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Kuchli (Strong)
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                {selectedText && (
+                <div className="mt-4 p-4 border-l-4 border-primary bg-primary/10">
+                    <p className="font-mono text-lg">"{selectedText}"</p>
+                </div>
+                )}
+            </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ishtirokchi ma'lumotlari (Speaker Metadata)</CardTitle>
-            <CardDescription>
-              Bu ma'lumotlar avtomatik to'ldirilmaydi, o'zingiz kiriting.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <FormField
+            <Card>
+            <CardHeader>
+                <CardTitle>Emotsiya va Intensivlik</CardTitle>
+                <CardDescription>
+                Yozuv uchun emotsiya va uning darajasini tanlang.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <FormField
                 control={form.control}
-                name="gender"
+                name="emotion"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jinsi</FormLabel>
+                    <FormItem>
+                    <FormLabel>Emotsiya</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isReadOnly}
+                        onValueChange={field.onChange}
+                        value={field.value}
                     >
-                      <FormControl>
+                        <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Jinsini tanlang..." />
+                            <SelectValue placeholder="Emotsiyani tanlang..." />
                         </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">Erkak</SelectItem>
-                        <SelectItem value="female">Ayol</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="age"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Yoshi</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isReadOnly}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Yosh oralig'ini tanlang..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {ageRanges.map((age) => (
-                          <SelectItem key={age} value={age}>
-                            {age}
-                          </SelectItem>
+                        </FormControl>
+                        <SelectContent>
+                        {emotions.map((emotion) => (
+                            <SelectItem key={emotion.id} value={emotion.id}>
+                            {emotion.label}
+                            </SelectItem>
                         ))}
-                      </SelectContent>
+                        </SelectContent>
                     </Select>
                     <FormMessage />
-                  </FormItem>
+                    </FormItem>
                 )}
-              />
-              <FormField
+                />
+                <FormField
                 control={form.control}
-                name="region"
+                name="intensity"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hudud</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isReadOnly}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Hududni tanlang..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {regions.map((region) => (
-                          <SelectItem key={region} value={region.toLowerCase()}>
-                            {region}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Shaxsiyat xususiyatlari (Personality Traits)</CardTitle>
-            <CardDescription>
-              Iltimos, o‘zingizga eng yaqin deb hisoblagan xususiyatlarni belgilang.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {personalityTraits.map((item) => (
-              <FormField
-                key={item.id}
-                control={form.control}
-                name={`personality.${item.id}`}
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormItem className="space-y-3">
+                    <FormLabel>Intensivlik</FormLabel>
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isReadOnly}
-                      />
+                        <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex items-center space-x-4"
+                        >
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="normal" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                            Oddiy (Normal)
+                            </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="strong" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                            Kuchli (Strong)
+                            </FormLabel>
+                        </FormItem>
+                        </RadioGroup>
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>{item.label}</FormLabel>
-                      <FormDescription>{item.description}</FormDescription>
-                    </div>
-                  </FormItem>
+                    <FormMessage />
+                    </FormItem>
                 )}
-              />
-            ))}
-          </CardContent>
-        </Card>
+                />
+            </CardContent>
+            </Card>
+
+            <Card>
+            <CardHeader>
+                <CardTitle>Ishtirokchi ma'lumotlari (Speaker Metadata)</CardTitle>
+                <CardDescription>
+                Bu ma'lumotlar avtomatik to'ldirilmaydi, o'zingiz kiriting.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Jinsi</FormLabel>
+                        <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        >
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Jinsini tanlang..." />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="male">Erkak</SelectItem>
+                            <SelectItem value="female">Ayol</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="age"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Yoshi</FormLabel>
+                        <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        >
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Yosh oralig'ini tanlang..." />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {ageRanges.map((age) => (
+                            <SelectItem key={age} value={age}>
+                                {age}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="region"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Hudud</FormLabel>
+                        <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        >
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Hududni tanlang..." />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {regions.map((region) => (
+                            <SelectItem key={region} value={region.toLowerCase()}>
+                                {region}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                </div>
+            </CardContent>
+            </Card>
+            
+            <Card>
+            <CardHeader>
+                <CardTitle>Shaxsiyat xususiyatlari (Personality Traits)</CardTitle>
+                <CardDescription>
+                Iltimos, o‘zingizga eng yaqin deb hisoblagan xususiyatlarni belgilang.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {personalityTraits.map((item) => (
+                <FormField
+                    key={item.id}
+                    control={form.control}
+                    name={`personality.${item.id}`}
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                        <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                        />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                        <FormLabel>{item.label}</FormLabel>
+                        <FormDescription>{item.description}</FormDescription>
+                        </div>
+                    </FormItem>
+                    )}
+                />
+                ))}
+            </CardContent>
+            </Card>
+        </fieldset>
 
         {!isReadOnly && (
             <Button type="submit" disabled={!form.formState.isDirty} size="lg">
@@ -416,5 +412,3 @@ export function MetadataForm({
     </Form>
   );
 }
-
-    
