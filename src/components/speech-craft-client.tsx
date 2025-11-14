@@ -78,25 +78,6 @@ export function SpeechCraftClient() {
 
   const isMobile = useIsMobile();
   
-  // Reset view on screen size change or when selections are cleared
-  useEffect(() => {
-    if (isMobile) {
-        // On mobile, if a recording was selected, stay on details. If not, go to list.
-        if (view === 'details' && !selectedRecordingId) {
-            setView('list');
-        }
-    } else {
-        // On desktop, the view logic is simpler. If we are in 'new' mode, stay there.
-        // Otherwise, default to 'list' view which shows list and details side-by-side.
-        // The selection of a recording will determine if details are shown.
-        if (view !== 'new') {
-           setView('list');
-        }
-    }
-  }, [isMobile, selectedRecordingId, view]);
-
-
-  /* --- Mount: Load from Firestore --- */
   useEffect(() => {
     setIsClient(true);
     if (!user || !firestore) return;
@@ -138,20 +119,29 @@ export function SpeechCraftClient() {
   }, [user, firestore, toast]);
 
   /* --- View Management --- */
-  const handleClearSelection = () => {
+  const handleClearSelection = useCallback(() => {
     setSelectedRecordingId(null);
     setView('list');
-  };
+  }, []);
 
-  const handleSelectRecording = (id: string) => {
+  const handleSelectRecording = useCallback((id: string) => {
     setSelectedRecordingId(id);
     setView('details'); // Always switch to details view on selection
-  };
+  }, []);
 
-  const handleShowNewRecording = () => {
+  const handleShowNewRecording = useCallback(() => {
     setSelectedRecordingId(null);
     setView('new');
-  };
+  }, []);
+  
+  // This effect handles view changes when the screen size changes or selections are cleared.
+  useEffect(() => {
+    // If mobile, and the view is 'details' but there is no selected recording, go back to list.
+    if (isMobile && view === 'details' && !selectedRecordingId) {
+        setView('list');
+    }
+  }, [isMobile, selectedRecordingId, view]);
+
 
   /* --- Add Recording --- */
   const handleAddRecording = async (
@@ -232,15 +222,10 @@ export function SpeechCraftClient() {
     const originalRecording = recordings.find(r => r.id === updatedRecording.id);
     if (!originalRecording) return;
 
-    // createdAt should not be part of the update payload if it's already a string.
-    // Firestore expects a Timestamp object for updates if the field is a timestamp.
-    // Since we are managing it as a string on the client, we just pass the data.
     const { id, createdAt, ...dataToUpdate } = updatedRecording;
     const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
     
     try {
-      // The data from the form is already in the correct format.
-      // We don't need to convert createdAt back to a Timestamp here.
       await updateDoc(docRef, dataToUpdate);
       toast({
         title: "Ma'lumotlar yangilandi",
@@ -463,3 +448,5 @@ export function SpeechCraftClient() {
     </div>
   );
 }
+
+    
