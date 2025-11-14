@@ -228,15 +228,16 @@ export function SpeechCraftClient() {
     const originalRecording = recordings.find(r => r.id === updatedRecording.id);
     if (!originalRecording) return;
 
+    // createdAt should not be part of the update payload if it's already a string.
+    // Firestore expects a Timestamp object for updates if the field is a timestamp.
+    // Since we are managing it as a string on the client, we just pass the data.
     const { id, createdAt, ...dataToUpdate } = updatedRecording;
     const docRef = doc(firestore, 'users', user.uid, 'recordings', id);
     
     try {
-      const updatePayload = {
-        ...dataToUpdate,
-      };
-
-      await updateDoc(docRef, updatePayload);
+      // The data from the form is already in the correct format.
+      // We don't need to convert createdAt back to a Timestamp here.
+      await updateDoc(docRef, dataToUpdate);
       toast({
         title: "Ma'lumotlar yangilandi",
         description: "O'zgarishlaringiz saqlandi.",
@@ -336,8 +337,10 @@ export function SpeechCraftClient() {
           fileName 
         });
 
-        const audioBlob = base64ToBlob(audioBase64);
-        zip.file(fileName, audioBlob);
+        if (audioBase64) {
+            const audioBlob = base64ToBlob(audioBase64);
+            zip.file(fileName, audioBlob);
+        }
       }
 
       zip.file("metadata.json", JSON.stringify(metadata, null, 2));
@@ -436,6 +439,7 @@ export function SpeechCraftClient() {
                 onUpdateRecording={handleUpdateRecording}
                 onDeleteRecording={handleDeleteRecording}
                 onClearSelection={handleClearSelection}
+                isReadOnly={false}
               />
             )}
             {view === 'list' && !selectedRecording && (

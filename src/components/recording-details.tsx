@@ -36,7 +36,7 @@ export function RecordingDetails({
   // Ensure createdAt is always a Date object before passing to components
   const createdAtDate = typeof recording.createdAt === 'string' 
     ? new Date(recording.createdAt) 
-    : recording.createdAt.toDate();
+    : (recording.createdAt as any).toDate(); // Handle Firebase Timestamp
 
   return (
     <div className="space-y-6">
@@ -66,18 +66,18 @@ export function RecordingDetails({
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Haqiqatan ham oʻchirmoqchimisiz?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the
-                    recording from the server.
+                    Bu amalni qaytarib boʻlmaydi. Bu yozuvni serverdan butunlay oʻchirib tashlaydi.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => onDeleteRecording(recording.id)}
+                    className="bg-destructive hover:bg-destructive/90"
                   >
-                    Delete
+                    O'chirish
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

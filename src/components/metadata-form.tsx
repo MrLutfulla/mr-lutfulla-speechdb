@@ -101,7 +101,7 @@ const formSchema = z.object({
     analytical: z.boolean().default(false),
     leader: z.boolean().default(false),
     compassionate: z.boolean().default(false),
-  }),
+  }).optional(), // Make personality optional to avoid issues on first render
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -119,6 +119,11 @@ export function MetadataForm({
   isNewRecording,
   isReadOnly = false,
 }: MetadataFormProps) {
+  const defaultPersonality = {
+    extrovert: false, introvert: false, optimistic: false, emotional: false,
+    calm: false, analytical: false, leader: false, compassionate: false,
+  };
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -128,14 +133,13 @@ export function MetadataForm({
         emotion: recording.emotion || 'neutral',
         intensity: recording.intensity || 'normal',
         textId: recording.textId || 'sentence_1',
-        personality: recording.personality || {
-            extrovert: false, introvert: false, optimistic: false, emotional: false,
-            calm: false, analytical: false, leader: false, compassionate: false,
-        },
+        personality: recording.personality || defaultPersonality,
     },
   });
   
   useEffect(() => {
+    // Reset form when the recording prop changes.
+    // This is important when the user selects a different recording from the list.
     form.reset({
         gender: recording.gender || 'male',
         age: recording.age || '18-25',
@@ -143,10 +147,7 @@ export function MetadataForm({
         emotion: recording.emotion || 'neutral',
         intensity: recording.intensity || 'normal',
         textId: recording.textId || 'sentence_1',
-        personality: recording.personality || {
-            extrovert: false, introvert: false, optimistic: false, emotional: false,
-            calm: false, analytical: false, leader: false, compassionate: false,
-        },
+        personality: recording.personality || defaultPersonality,
     });
   }, [recording, form]);
 
@@ -156,6 +157,8 @@ export function MetadataForm({
       ...recording,
       ...values,
     });
+    // After saving, mark the form as not dirty
+    form.reset(values, { keepValues: true });
   }
 
   const selectedText = texts.find((t) => t.id === form.watch('textId'))?.label;
@@ -285,7 +288,6 @@ export function MetadataForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* speakerId field is removed */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
