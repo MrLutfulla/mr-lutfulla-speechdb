@@ -126,7 +126,7 @@ export function SpeechCraftClient() {
 
   const handleSelectRecording = useCallback((id: string) => {
     setSelectedRecordingId(id);
-    setView('details'); // Always switch to details view on selection
+    setView('details');
   }, []);
 
   const handleShowNewRecording = useCallback(() => {
@@ -134,9 +134,7 @@ export function SpeechCraftClient() {
     setView('new');
   }, []);
   
-  // This effect handles view changes when the screen size changes or selections are cleared.
   useEffect(() => {
-    // If mobile, and the view is 'details' but there is no selected recording, go back to list.
     if (isMobile && view === 'details' && !selectedRecordingId) {
         setView('list');
     }
@@ -172,33 +170,30 @@ export function SpeechCraftClient() {
         const currentRecordingCount = userProfile.recordingCount || 0;
         const newRecordingCount = currentRecordingCount + 1;
 
-        // Use a sanitized display name and the new count for the speaker ID
         const speakerName = userProfile.displayName?.replace(/[^a-zA-Z0-9]/g, '_') || 'User';
         const speakerId = `${speakerName}_${String(newRecordingCount).padStart(2, '0')}`;
         
         const newRecordingDoc: Omit<Recording, 'id' | 'createdAt'> = {
           audioBase64,
-          speakerId, // The new structured ID
+          speakerId,
           textId: metadata.textId,
           emotion: metadata.emotion,
-          intensity: "normal", // Default, can be changed in the form
-          gender: "male", // Default, can be changed in the form
-          age: "18-25", // Default, can be changed in the form
-          region: "toshkent", // Default, can be changed in the form
+          intensity: "normal",
+          gender: "male",
+          age: "18-25",
+          region: "toshkent",
           personality: {
             extrovert: false, introvert: false, optimistic: false, emotional: false,
             calm: false, analytical: false, leader: false, compassionate: false,
           },
         };
         
-        // Add the new recording document
-        const newDocRef = doc(recordingsCollection); // Create a new doc reference with a generated ID
+        const newDocRef = doc(recordingsCollection);
         transaction.set(newDocRef, {
             ...newRecordingDoc,
             createdAt: Timestamp.now(),
         });
         
-        // Update the recording count on the user's profile
         transaction.update(userRef, { recordingCount: newRecordingCount });
 
         return newDocRef;
@@ -431,7 +426,7 @@ export function SpeechCraftClient() {
                 isReadOnly={false}
               />
             )}
-            {(view === 'list' || (view === 'details' && !selectedRecording)) && (
+            {view !== 'new' && (!selectedRecordingId || !selectedRecording) && (
                <div className="hidden md:flex h-full flex-col items-center justify-center bg-background text-muted-foreground p-8 min-h-[calc(100vh-10rem)]">
                   <HardDriveUpload className="w-16 h-16 mb-4 text-muted-foreground/50" />
                   <h2 className="text-xl font-medium">Yozuvni tanlang</h2>

@@ -6,7 +6,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { isAdmin } from '@/lib/admins';
 import { useRouter } from 'next/navigation';
 import { collection, onSnapshot, query, orderBy, Timestamp, doc, getCountFromServer, getDocs } from 'firebase/firestore';
-import { Loader2, Mic, Download, Copy, Trash2 } from 'lucide-react';
+import { Loader2, Mic, Download, Copy, Trash2, ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/header';
 import { UserProfile, Recording } from '@/lib/types';
 import { RecordingList } from '@/components/recording-list';
@@ -440,7 +440,7 @@ function AdminPage() {
         {/* Recordings List */}
         <div className={cn("w-full md:w-96 shrink-0 border-r bg-card flex flex-col", showRecordingsList ? "flex" : "hidden md:flex")}>
           <div className="p-4 border-b flex items-center gap-4">
-            {isMobile && <Button variant="ghost" size="icon" onClick={handleBack}><Mic className="h-5 w-5" /></Button>}
+            {isMobile && <Button variant="ghost" size="icon" onClick={handleBack}><ArrowLeft className="h-5 w-5" /></Button>}
             <h2 className="text-xl font-headline font-bold">Yozuvlar</h2>
           </div>
           {selectedUserId ? (
@@ -486,3 +486,4 @@ function AdminPage() {
 }
 
 export default AdminPage;
+

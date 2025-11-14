@@ -59,7 +59,8 @@ const texts = [
 const ageRanges = ['18 yoshgacha', '18-25', '26-35', '36-45', '46-55', '56+'];
 
 const regions = [
-  'Toshkent',
+  'Toshkent shahri',
+  'Toshkent viloyati',
   'Andijon',
   'Buxoro',
   'Farg‘ona',
@@ -101,7 +102,7 @@ const formSchema = z.object({
     analytical: z.boolean().default(false),
     leader: z.boolean().default(false),
     compassionate: z.boolean().default(false),
-  }).optional(), // Make personality optional to avoid issues on first render
+  }).optional(),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -127,26 +128,24 @@ export function MetadataForm({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        gender: recording.gender || 'male',
-        age: recording.age || '18-25',
-        region: recording.region || 'toshkent',
-        emotion: recording.emotion || 'neutral',
+        gender: recording.gender || undefined,
+        age: recording.age || undefined,
+        region: recording.region || undefined,
+        emotion: recording.emotion || undefined,
         intensity: recording.intensity || 'normal',
-        textId: recording.textId || 'sentence_1',
+        textId: recording.textId || undefined,
         personality: recording.personality || defaultPersonality,
     },
   });
   
   useEffect(() => {
-    // Reset form when the recording prop changes.
-    // This is important when the user selects a different recording from the list.
     form.reset({
-        gender: recording.gender || 'male',
-        age: recording.age || '18-25',
-        region: recording.region || 'toshkent',
-        emotion: recording.emotion || 'neutral',
+        gender: recording.gender || undefined,
+        age: recording.age || undefined,
+        region: recording.region || undefined,
+        emotion: recording.emotion || undefined,
         intensity: recording.intensity || 'normal',
-        textId: recording.textId || 'sentence_1',
+        textId: recording.textId || undefined,
         personality: recording.personality || defaultPersonality,
     });
   }, [recording, form]);
@@ -157,7 +156,6 @@ export function MetadataForm({
       ...recording,
       ...values,
     });
-    // After saving, mark the form as not dirty
     form.reset(values, { keepValues: true });
   }
 
@@ -166,7 +164,7 @@ export function MetadataForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <fieldset disabled={isReadOnly}>
+        <fieldset>
             <Card>
             <CardHeader>
                 <CardTitle>Matn (Context)</CardTitle>
@@ -356,7 +354,7 @@ export function MetadataForm({
                         </FormControl>
                         <SelectContent>
                             {regions.map((region) => (
-                            <SelectItem key={region} value={region.toLowerCase()}>
+                            <SelectItem key={region} value={region.toLowerCase().replace('‘', "'")}>
                                 {region}
                             </SelectItem>
                             ))}
