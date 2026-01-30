@@ -249,7 +249,7 @@ function AdminPage() {
         
         toast({
             title: "Eksport muvaffaqiyatli",
-            description: `${userName || 'Foydalanuvchi'} ma'lumotlari ZIP faylga saqlandi.`,
+            description: `${userName || 'Foydalanuvchi'} ma'lumotlari ZIP faylga saqlandi.`
         });
 
     } catch (err) {
@@ -486,4 +486,3 @@ function AdminPage() {
 }
 
 export default AdminPage;
-

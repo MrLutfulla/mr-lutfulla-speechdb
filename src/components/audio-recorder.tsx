@@ -1,190 +1,141 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Mic, StopCircle, Save, AlertCircle, RefreshCcw } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Mic, Pause, Play, Trash2, StopCircle } from 'lucide-react';
+import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
 
 interface AudioRecorderProps {
-  onSave: (blob: Blob) => void;
+  onRecordingComplete: (blob: Blob) => void;
 }
 
-type RecordingStatus = 'idle' | 'permission' | 'recording' | 'stopped' | 'error';
-
-export function AudioRecorder({ onSave }: AudioRecorderProps) {
-  const [status, setStatus] = useState<RecordingStatus>('idle');
+export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [timer, setTimer] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [duration, setDuration] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const { toast } = useToast();
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const stopStream = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-  }, [stream]);
+  };
 
-  const stopTimer = useCallback(() => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-  }, []);
-  
-  const startTimer = useCallback(() => {
-    stopTimer(); 
-    setTimer(0);
-    timerIntervalRef.current = setInterval(() => {
-      setTimer((prev) => prev + 1);
+  const startTimer = () => {
+    stopTimer();
+    timerRef.current = setInterval(() => {
+      setDuration((prev) => prev + 1);
     }, 1000);
-  }, [stopTimer]);
+  };
 
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        onRecordingComplete(blob);
+        audioChunksRef.current = [];
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setIsPaused(false);
+      setDuration(0);
+      startTimer();
+    } catch (err) {
+      console.error('Error starting recording:', err);
+      alert('Mikrofon topilmadi yoki ruxsat berilmadi.');
+    }
+  }, [onRecordingComplete]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsPaused(false);
+      stopTimer();
+    }
+  }, [isRecording]);
+
+  const handleReset = () => {
+    stopRecording();
+    setAudioBlob(null);
+    setDuration(0);
+    stopTimer();
+    if(audioRef.current) {
+        audioRef.current.src = '';
+    }
+  };
 
   useEffect(() => {
+    // Cleanup on unmount
     return () => {
-      stopStream();
       stopTimer();
-    };
-  }, [stopStream, stopTimer]);
-
-  const startRecording = async () => {
-    setStatus('permission');
-    setError(null);
-    setAudioBlob(null);
-    chunksRef.current = [];
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus('error');
-      setError("Bu brauzerda ovoz yozish qo'llab-quvvatlanmaydi. Iltimos, Chrome yoki Safari kabi standart brauzerdan foydalaning.");
-      return;
-    }
-
-    let mediaStream: MediaStream;
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          sampleRate: 48000,
-          channelCount: 1,
-        }
-      });
-      setStream(mediaStream);
-    } catch (err: any) {
-      console.error('Error accessing microphone:', err);
-      setStatus('error');
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setError("Mikrofonga ruxsat berilmadi. Iltimos, brauzer sozlamalaridan ruxsat bering.");
-      } else {
-        setError("Mikrofonga kirish imkoni yo‘q. Agar siz Telegram kabi ilova ichidagi brauzerdan foydalanayotgan bo'lsangiz, iltimos, sahifani oddiy brauzerda (masalan, Chrome yoki Safari) oching.");
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
       }
-      return;
-    }
-    
-    setStatus('recording');
-    startTimer();
-
-    const options = {
-      mimeType: 'audio/webm;codecs=opus',
-      audioBitsPerSecond: 128000,
     };
-    
-    const recorder = new MediaRecorder(mediaStream, options);
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunksRef.current.push(event.data);
-    };
-
-    recorder.onstop = () => {
-      let blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      setAudioBlob(blob);
-      setStatus('stopped');
-      stopTimer();
-      stopStream();
-    };
-
-    recorder.start();
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && status === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-  };
-
-  const handleSave = () => {
-    if (audioBlob) {
-      onSave(audioBlob);
-      reset();
-    }
-  };
-
-  const reset = () => {
-    setStatus('idle');
-    setAudioBlob(null);
-    setError(null);
-    setTimer(0);
-    stopTimer();
-    stopStream();
-  };
+  }, []);
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs
-      .toString()
-      .padStart(2, '0')}`;
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
   };
 
   return (
-    <Card className="w-full max-w-sm shadow-lg">
-      <CardContent className="flex flex-col items-center gap-4 p-6">
-        {status === 'error' && error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Mikrofonga kirishda xatolik</AlertTitle>
-            <AlertDescription>
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
-        <div className="flex items-center justify-center gap-4 h-14">
-          {status === 'idle' && (
-            <Button onClick={startRecording} size="lg" className="w-48">
-              <Mic className="mr-2 h-5 w-5" />
-              Yozib olish
-            </Button>
-          )}
-          {status === 'permission' && <p>Ruxsat so'ralmoqda...</p>}
-          {status === 'recording' && (
-            <Button onClick={stopRecording} size="lg" variant="destructive" className="w-48">
-              <StopCircle className="mr-2 h-5 w-5" />
-              To'xtatish
-            </Button>
-          )}
-          {status === 'stopped' && (
-            <div className="flex gap-2">
-              <Button onClick={handleSave} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Save className="mr-2 h-5 w-5" />
-                Saqlash
-              </Button>
-              <Button onClick={reset} size="lg" variant="outline">
-                <RefreshCcw className="mr-2 h-5 w-5" />
-                Bekor qilish
-              </Button>
+    <div className="flex flex-col items-center justify-center w-full space-y-6">
+        <div className="w-full h-24 bg-muted/50 rounded-lg flex items-center justify-center">
+            {/* Placeholder for waveform visualizer */}
+            <div className="text-muted-foreground">Ovoz to'lqini</div>
+        </div>
+
+        <div className="text-4xl font-mono font-bold tracking-wider">
+            {formatTime(duration)}
+        </div>
+
+        <div className="flex items-center justify-center gap-4">
+            {audioBlob && (
+                <Button onClick={handleReset} variant="outline" size="lg">
+                   Qayta Yozish
+                </Button>
+            )}
+            
+            {!isRecording && !audioBlob && (
+                <button 
+                    onClick={startRecording} 
+                    className="w-24 h-24 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg transition-transform transform hover:scale-105 ring-4 ring-primary/20"
+                >
+                    <Mic className="h-10 w-10" />
+                </button>
+            )}
+
+            {isRecording && (
+                 <Button onClick={stopRecording} variant="destructive" size="lg" className="rounded-full w-24 h-24">
+                    <StopCircle className="h-10 w-10" />
+                </Button>
+            )}
+        </div>
+        
+        {audioBlob && (
+            <div className="w-full">
+                <audio ref={audioRef} src={URL.createObjectURL(audioBlob)} controls className="w-full" />
             </div>
-          )}
-        </div>
-        <div className="text-3xl font-mono tabular-nums h-9 text-muted-foreground">
-          {(status === 'recording' || status === 'stopped') && formatTime(timer)}
-        </div>
-      </CardContent>
-    </Card>
+        )}
+    </div>
   );
 }
