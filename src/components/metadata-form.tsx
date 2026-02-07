@@ -1,26 +1,24 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { NewRecordingMetadata } from '@/lib/types';
+import { NewRecordingMetadata, PersonalityTraits } from '@/lib/types';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { emotionInstructions, Instruction } from '@/lib/instructions';
 
 interface MetadataFormProps {
-  onMetadataChange: (metadata: NewRecordingMetadata) => void;
+  onMetadataChange: (metadata: Omit<NewRecordingMetadata, 'textId'>, isValid: boolean) => void;
+  textId: string; 
 }
 
-const emotions = [
-  { id: 'neutral', label: 'Neutral' },
-  { id: 'happy', label: 'Happy' },
-  { id: 'sad', label: 'Sad' },
-  { id: 'angry', label: 'Angry' },
-  { id: 'fearful', label: 'Fearful' },
-  { id: 'disgust', label: 'Disgust' },
-  { id: 'surprised', label: 'Surprised' },
-];
+// Yo'riqnomadan kalitlarni olib, emotsiyalar ro'yxatini yaratish
+const emotions = Object.keys(emotionInstructions).map(key => ({
+    id: key,
+    label: emotionInstructions[key].title.split(' ')[1], // "NEUTRAL", "CALM" etc.
+}));
 
-const ageRanges = ['18-25', '26-35', '36-45', '46-60', '60+'];
 const regions = ['Toshkent', 'Fargʻona', 'Andijon', 'Namangan', 'Sirdaryo', 'Jizzax', 'Samarqand', 'Buxoro', 'Navoiy', 'Qashqadaryo', 'Surxondaryo', 'Xorazm', 'Qoraqalpog\'iston'];
 const personalityTraits = [
     { id: 'extrovert', label: 'Extrovert' },
@@ -33,61 +31,79 @@ const personalityTraits = [
     { id: 'compassionate', label: 'Compassionate' },
 ];
 
-export function MetadataForm({ onMetadataChange }: MetadataFormProps) {
-  const [emotion, setEmotion] = useState('neutral');
-  const [intensity, setIntensity] = useState('normal');
-  const [gender, setGender] = useState('male');
-  const [age, setAge] = useState('18-25');
-  const [region, setRegion] = useState('Toshkent');
-  const [personality, setPersonality] = useState<Record<string, boolean>>({
-    extrovert: false,
-    introvert: false,
-    optimistic: false,
-    emotional: false,
-    calm: false,
-    analytical: false,
-    leader: false,
-    compassionate: false,
-  });
+function InstructionDisplay({ instruction }: { instruction: Instruction }) {
+    return (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="font-semibold text-blue-800">{instruction.title}</h3>
+            <p className="text-sm text-blue-700 mt-1">{instruction.description}</p>
+        </div>
+    )
+}
 
-  const metadata: NewRecordingMetadata = useMemo(() => ({
-    textId: 'sentence_1', // This should be dynamic later
+export function MetadataForm({ onMetadataChange, textId }: MetadataFormProps) {
+  const [emotion, setEmotion] = useState<string | null>(null);
+  const [intensity, setIntensity] = useState<string | null>(null);
+  const [gender, setGender] = useState<string | null>(null);
+  const [age, setAge] = useState<string>('');
+  const [region, setRegion] = useState<string | null>(null);
+  const [personality, setPersonality] = useState<PersonalityTraits>({} as PersonalityTraits);
+
+  useEffect(() => {
+    setEmotion(null);
+    setIntensity(null);
+    setGender(null);
+    setAge('');
+    setRegion(null);
+    setPersonality({ extrovert: false, introvert: false, optimistic: false, emotional: false, calm: false, analytical: false, leader: false, compassionate: false });
+  }, [textId]);
+
+  const isFormValid = useMemo(() => {
+    const ageAsNumber = Number(age);
+    return (
+      !!emotion &&
+      !!intensity &&
+      !!gender &&
+      age.trim() !== '' && !isNaN(ageAsNumber) && ageAsNumber > 0 &&
+      !!region &&
+      Object.values(personality).some(value => value)
+    );
+  }, [emotion, intensity, gender, age, region, personality]);
+
+  const metadata: Omit<NewRecordingMetadata, 'textId'> = useMemo(() => ({
     emotion,
     intensity,
     gender,
-    age,
+    age: age.trim(),
     region,
     personality,
   }), [emotion, intensity, gender, age, region, personality]);
 
   useEffect(() => {
-    if (typeof onMetadataChange === 'function') {
-      onMetadataChange(metadata);
-    }
-  }, [metadata, onMetadataChange]);
+    onMetadataChange(metadata, isFormValid);
+  }, [metadata, isFormValid, onMetadataChange]);
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-foreground mb-4 bg-primary/10 p-3 rounded-md text-primary">Label Ma'lumotlari</h2>
-      
+      <h2 className="text-lg font-semibold text-foreground mb-1">Label Ma'lumotlari</h2>
+      <p className="text-sm text-muted-foreground mb-4">📌 Iltimos, quyidagi gapni ko‘rsatilgan emotsiyada o‘qing. Bu aktyorlik tarzida bajariladi, real holatingiz shart emas.</p>
+
       <div className="space-y-2">
-        <Label htmlFor="emotion">Feelings: Emosiya:</Label>
-        <Select value={emotion} onValueChange={setEmotion}>
-            <SelectTrigger id="emotion">
-                <SelectValue placeholder="Emosiyani tanlang..." />
-            </SelectTrigger>
+        <Label htmlFor="emotion">Emosiya:</Label>
+        <Select value={emotion || ''} onValueChange={setEmotion}>
+            <SelectTrigger id="emotion"><SelectValue placeholder="Emosiyani tanlang..." /></SelectTrigger>
             <SelectContent>
                 {emotions.map(e => <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>)}
             </SelectContent>
         </Select>
+        {emotion && emotionInstructions[emotion] && (
+            <InstructionDisplay instruction={emotionInstructions[emotion]} />
+        )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="intensity">Intensity: Qanday:</Label>
-        <Select value={intensity} onValueChange={setIntensity}>
-            <SelectTrigger id="intensity">
-                <SelectValue placeholder="Intensivlikni tanlang..." />
-            </SelectTrigger>
+        <Label htmlFor="intensity">Intensivlik:</Label>
+        <Select value={intensity || ''} onValueChange={setIntensity}>
+            <SelectTrigger id="intensity"><SelectValue placeholder="Intensivlikni tanlang..." /></SelectTrigger>
             <SelectContent>
                 <SelectItem value="normal">Normal</SelectItem>
                 <SelectItem value="high">High</SelectItem>
@@ -97,50 +113,45 @@ export function MetadataForm({ onMetadataChange }: MetadataFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="gender">Gender: Jins:</Label>
-        <Select value={gender} onValueChange={setGender}>
-            <SelectTrigger id="gender">
-                <SelectValue placeholder="Jinsni tanlang..." />
-            </SelectTrigger>
+        <Label htmlFor="gender">Jins:</Label>
+        <Select value={gender || ''} onValueChange={setGender}>
+            <SelectTrigger id="gender"><SelectValue placeholder="Jinsni tanlang..." /></SelectTrigger>
             <SelectContent>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="male">Erkak</SelectItem>
+                <SelectItem value="female">Ayol</SelectItem>
             </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="age">Age: Yosh:</Label>
-        <Select value={age} onValueChange={setAge}>
-            <SelectTrigger id="age">
-                <SelectValue placeholder="Yoshni tanlang..." />
-            </SelectTrigger>
-            <SelectContent>
-                {ageRanges.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-        </Select>
+        <Label htmlFor="age">Yosh:</Label>
+        <Input 
+            id="age" 
+            type="number" 
+            value={age} 
+            onChange={(e) => setAge(e.target.value)} 
+            placeholder="Yoshingizni kiriting..." 
+        />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="region">Region: Hudud:</Label>
-        <Select value={region} onValueChange={setRegion}>
-            <SelectTrigger id="region">
-                <SelectValue placeholder="Hududni tanlang..." />
-            </SelectTrigger>
+        <Label htmlFor="region">Hudud:</Label>
+        <Select value={region || ''} onValueChange={setRegion}>
+            <SelectTrigger id="region"><SelectValue placeholder="Hududni tanlang..." /></SelectTrigger>
             <SelectContent>
-                {regions.map(r => <SelectItem key={r} value={r.toLowerCase()}>{r}</SelectItem>)}
+                {regions.map(r => <SelectItem key={r} value={r.toLowerCase().replace(/['ʻ]/g, "")}>{r}</SelectItem>)}
             </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-3">
-        <Label>Personality Xususiyattiar:</Label>
+        <Label>Shaxsiyat xususiyatlari:</Label>
         <div className="grid grid-cols-2 gap-4">
           {personalityTraits.map(trait => (
             <div key={trait.id} className="flex items-center space-x-2">
               <Checkbox 
                 id={trait.id} 
-                checked={personality[trait.id] || false} 
+                checked={personality[trait.id as keyof PersonalityTraits] || false} 
                 onCheckedChange={(checked) => {
                     setPersonality(prev => ({...prev, [trait.id]: !!checked}))
                 }}/>

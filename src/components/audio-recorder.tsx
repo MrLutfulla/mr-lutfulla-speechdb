@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
 interface AudioRecorderProps {
-  onRecordingComplete: (blob: Blob) => void;
+  onRecordingComplete: (blob: Blob, duration: number) => void;
 }
 
 export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
@@ -46,7 +46,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
       recorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
-        onRecordingComplete(blob);
+        onRecordingComplete(blob, duration);
         audioChunksRef.current = [];
         stream.getTracks().forEach(track => track.stop());
       };
@@ -60,7 +60,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
       console.error('Error starting recording:', err);
       alert('Mikrofon topilmadi yoki ruxsat berilmadi.');
     }
-  }, [onRecordingComplete]);
+  }, [onRecordingComplete, duration]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {

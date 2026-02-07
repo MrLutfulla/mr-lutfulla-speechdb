@@ -1,6 +1,6 @@
 'use client';
 
-import { Waves, LogOut, UserCog, ChevronDown } from 'lucide-react';
+import { Waves, LogOut, UserCog, ChevronDown, User as UserIcon } from 'lucide-react';
 import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from './ui/button';
@@ -81,6 +81,10 @@ export function Header() {
                   <span>Admin Paneli</span>
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onClick={() => router.push('/account')}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Mening hisob yozuvim</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Chiqish</span>

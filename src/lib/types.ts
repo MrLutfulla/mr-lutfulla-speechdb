@@ -25,10 +25,16 @@ export interface Recording {
   age: string;
   region: string;
   personality: PersonalityTraits;
+  duration: number; // in seconds
 }
 
 export type NewRecordingMetadata = {
-  emotion: string;
+  emotion: string | null;
+  intensity: string | null;
+  gender: string | null;
+  age: string | null;
+  region: string | null;
+  personality: PersonalityTraits;
   textId: string;
 };
 
@@ -45,6 +51,7 @@ export interface StoredRecording {
   age: string;
   region: string;
   personality: PersonalityTraits;
+  duration: number;
 }
 
 export interface UserProfile {
@@ -53,4 +60,5 @@ export interface UserProfile {
   displayName: string | null;
   photoURL: string | null;
   recordingCount?: number;
+  totalDuration?: number;
 }
