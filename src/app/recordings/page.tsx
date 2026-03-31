@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Mic2 } from 'lucide-react';
 import { AudioPlayer } from '@/components/audio-player';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import { Button } from '@/components/ui/button';
 
 function formatDate(value: Recording['createdAt']) {
   if (typeof value === 'string') {
@@ -42,6 +45,66 @@ function getDurationSeconds(recording: Recording) {
   }
 
   return 0;
+}
+
+
+async function downloadOwnArchive(recordings: Recording[], displayName?: string | null) {
+  if (recordings.length === 0) {
+    alert("Yuklab olish uchun yozuvlar topilmadi.");
+    return;
+  }
+
+  const zip = new JSZip();
+  const safeName = (displayName || 'user').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const root = zip.folder(`${safeName}_recordings`);
+  if (!root) return;
+
+  const audioFolder = root.folder('audio');
+  const jsonFolder = root.folder('json');
+
+  const allMetadata = recordings.map((rec) => ({
+    id: rec.id,
+    textId: rec.textId,
+    emotion: rec.emotion,
+    intensity: rec.intensity,
+    gender: rec.gender,
+    age: rec.age,
+    region: rec.region,
+    personality: rec.personality,
+    duration: getDurationSeconds(rec),
+    createdAt: formatDate(rec.createdAt),
+  }));
+
+  root.file('metadata.json', JSON.stringify(allMetadata, null, 2));
+
+  recordings.forEach((rec) => {
+    const base = `${rec.speakerId || 'speaker'}_${rec.textId}_${rec.emotion}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const audioData = rec.audioBase64.includes(',') ? rec.audioBase64.split(',')[1] : rec.audioBase64;
+
+    audioFolder?.file(`${base}.webm`, audioData, { base64: true });
+    jsonFolder?.file(
+      `${base}.json`,
+      JSON.stringify(
+        {
+          id: rec.id,
+          textId: rec.textId,
+          emotion: rec.emotion,
+          intensity: rec.intensity,
+          gender: rec.gender,
+          age: rec.age,
+          region: rec.region,
+          personality: rec.personality,
+          duration: getDurationSeconds(rec),
+          createdAt: formatDate(rec.createdAt),
+        },
+        null,
+        2
+      )
+    );
+  });
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  saveAs(blob, `${safeName}_speech_dataset.zip`);
 }
 
 export default function RecordingsPage() {
@@ -102,9 +165,18 @@ export default function RecordingsPage() {
               <CardTitle>Mening yozuvlarim</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Jami: <span className="font-semibold text-foreground">{recordings.length}</span> ta yozuv,
-              umumiy davomiyligi{' '}
-              <span className="font-semibold text-foreground">{formatDuration(totalDuration)}</span>.
+              <p>
+                Jami: <span className="font-semibold text-foreground">{recordings.length}</span> ta yozuv,
+                umumiy davomiyligi{' '}
+                <span className="font-semibold text-foreground">{formatDuration(totalDuration)}</span>.
+              </p>
+              <Button
+                className="mt-4"
+                onClick={() => downloadOwnArchive(recordings, user?.displayName)}
+                disabled={recordings.length === 0}
+              >
+                Mening ma'lumotlarimni yuklab olish
+              </Button>
             </CardContent>
           </Card>
 
