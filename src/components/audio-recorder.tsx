@@ -14,6 +14,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [duration, setDuration] = useState(0);
+  const durationRef = useRef(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -29,7 +30,8 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
   const startTimer = () => {
     stopTimer();
     timerRef.current = setInterval(() => {
-      setDuration((prev) => prev + 1);
+      durationRef.current += 1;
+      setDuration(durationRef.current);
     }, 1000);
   };
 
@@ -46,7 +48,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
       recorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
-        onRecordingComplete(blob, duration);
+        onRecordingComplete(blob, durationRef.current);
         audioChunksRef.current = [];
         stream.getTracks().forEach(track => track.stop());
       };
@@ -54,13 +56,14 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
       recorder.start();
       setIsRecording(true);
       setIsPaused(false);
+      durationRef.current = 0;
       setDuration(0);
       startTimer();
     } catch (err) {
       console.error('Error starting recording:', err);
       alert('Mikrofon topilmadi yoki ruxsat berilmadi.');
     }
-  }, [onRecordingComplete, duration]);
+  }, [onRecordingComplete]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -74,6 +77,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
   const handleReset = () => {
     stopRecording();
     setAudioBlob(null);
+    durationRef.current = 0;
     setDuration(0);
     stopTimer();
     if(audioRef.current) {

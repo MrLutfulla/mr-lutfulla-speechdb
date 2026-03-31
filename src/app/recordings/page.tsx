@@ -30,6 +30,20 @@ function formatDuration(seconds = 0) {
   return `${minutes}:${String(rest).padStart(2, '0')}`;
 }
 
+function getDurationSeconds(recording: Recording) {
+  const legacyDuration = Number(recording.duration || 0);
+  if (Number.isFinite(legacyDuration) && legacyDuration > 0) {
+    return legacyDuration;
+  }
+
+  const fileDuration = Number((recording as unknown as { file?: { durationSec?: number } }).file?.durationSec || 0);
+  if (Number.isFinite(fileDuration) && fileDuration > 0) {
+    return fileDuration;
+  }
+
+  return 0;
+}
+
 export default function RecordingsPage() {
   const { user, loading } = useUser();
   const firestore = useFirestore();
@@ -66,7 +80,7 @@ export default function RecordingsPage() {
   }, [firestore, user, loading, router]);
 
   const totalDuration = useMemo(
-    () => recordings.reduce((sum, rec) => sum + (rec.duration || 0), 0),
+    () => recordings.reduce((sum, rec) => sum + getDurationSeconds(rec), 0),
     [recordings]
   );
 
@@ -113,7 +127,7 @@ export default function RecordingsPage() {
                       <Badge variant="outline">{recording.region || 'hudud yo\'q'}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(recording.createdAt)} • {formatDuration(recording.duration || 0)}
+                      {formatDate(recording.createdAt)} • {formatDuration(getDurationSeconds(recording))}
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-3">
