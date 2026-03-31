@@ -2,6 +2,8 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
+export type RegionField = string | { level1: string; level2?: string | null };
+
 export interface PersonalityTraits {
   extrovert: boolean;
   introvert: boolean;
@@ -23,7 +25,7 @@ export interface Recording {
   textId: string;
   gender: 'male' | 'female';
   age: string;
-  region: string;
+  region: RegionField;
   personality: PersonalityTraits;
   duration: number; // in seconds
 }
@@ -33,7 +35,7 @@ export type NewRecordingMetadata = {
   intensity: string | null;
   gender: string | null;
   age: string | null;
-  region: string | null;
+  region: RegionField | null;
   personality: PersonalityTraits;
   textId: string;
 };
@@ -49,7 +51,7 @@ export interface StoredRecording {
   textId: string;
   gender: 'male' | 'female';
   age: string;
-  region: string;
+  region: RegionField;
   personality: PersonalityTraits;
   duration: number;
 }

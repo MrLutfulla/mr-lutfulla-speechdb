@@ -13,6 +13,8 @@ import { emotionInstructions } from '@/lib/instructions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { buildPendingTasks, buildSentenceOptions } from '@/lib/recording-task-utils';
+import { copy } from '@/lib/i18n';
+import { useAppLang } from '@/hooks/use-app-lang';
 
 type RecordingTask = {
   textId: string;
@@ -26,12 +28,14 @@ function PromptDisplay({
   allCompleted,
   sentenceOptions,
   onSentenceChange,
+  lang,
 }: {
   task: RecordingTask | null;
   onNextClick: () => void;
   allCompleted: boolean;
   sentenceOptions: Array<{ textId: string; label: string; remaining: number }>;
   onSentenceChange: (textId: string) => void;
+  lang: 'uz' | 'ru' | 'en';
 }) {
   const instruction = task ? emotionInstructions[task.emotion] : null;
 
@@ -45,18 +49,18 @@ function PromptDisplay({
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="flex-1">
                 <p className="text-lg text-foreground">
-                  <span className="font-semibold mr-2">Matn:</span>
+                  <span className="font-semibold mr-2">{copy[lang].text}:</span>
                   <span className="text-muted-foreground">{task?.text}</span>
                 </p>
                 <p className="text-sm mt-1">
-                  <span className="font-semibold mr-2">Emotsiya:</span>
+                  <span className="font-semibold mr-2">{copy[lang].emotion}:</span>
                   <span className="text-primary font-medium uppercase">{task?.emotion}</span>
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Select onValueChange={onSentenceChange}>
                   <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Gapdan boshlashni tanlang" />
+                    <SelectValue placeholder={copy[lang].chooseSentence} />
                   </SelectTrigger>
                   <SelectContent>
                     {sentenceOptions.map((option) => (
@@ -84,12 +88,12 @@ function PromptDisplay({
   );
 }
 
-function Footer({ completedTasks, totalTasks }: { completedTasks: number; totalTasks: number }) {
+function Footer({ completedTasks, totalTasks, lang }: { completedTasks: number; totalTasks: number; lang: 'uz' | 'ru' | 'en' }) {
   return (
     <footer className="bg-card border-t py-3">
       <div className="container mx-auto flex justify-between items-center text-sm text-muted-foreground">
-        <p>Progress: {completedTasks}/{totalTasks}</p>
-        <p>Har bir gap uchun emotsiya: {emotions.length} ta</p>
+        <p>{copy[lang].progress}: {completedTasks}/{totalTasks}</p>
+        <p>{copy[lang].emotionsPerSentence}: {emotions.length}</p>
       </div>
     </footer>
   );
@@ -100,6 +104,7 @@ export default function Home() {
   const router = useRouter();
   const firestore = useFirestore();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { lang } = useAppLang();
   const [availableTasks, setAvailableTasks] = useState<RecordingTask[]>([]);
   const [currentTask, setCurrentTask] = useState<RecordingTask | null>(null);
   const [allCompleted, setAllCompleted] = useState(false);
@@ -215,6 +220,7 @@ export default function Home() {
         allCompleted={allCompleted}
         sentenceOptions={sentenceOptions}
         onSentenceChange={handleSentenceChange}
+        lang={lang}
       />
       <main className="flex-1 overflow-auto bg-background/90">
         {!allCompleted && currentTask && (
@@ -226,7 +232,7 @@ export default function Home() {
           />
         )}
       </main>
-      <Footer completedTasks={completedTaskCount} totalTasks={totalTaskCount} />
+      <Footer completedTasks={completedTaskCount} totalTasks={totalTaskCount} lang={lang} />
     </div>
   );
 }

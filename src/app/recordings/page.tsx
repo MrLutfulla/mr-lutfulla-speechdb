@@ -13,6 +13,7 @@ import { AudioPlayer } from '@/components/audio-player';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { Button } from '@/components/ui/button';
+import { formatRegion } from '@/lib/region';
 
 function formatDate(value: Recording['createdAt']) {
   if (typeof value === 'string') {
@@ -69,7 +70,7 @@ async function downloadOwnArchive(recordings: Recording[], displayName?: string 
     intensity: rec.intensity,
     gender: rec.gender,
     age: rec.age,
-    region: rec.region,
+    region: formatRegion(rec.region),
     personality: rec.personality,
     duration: getDurationSeconds(rec),
     createdAt: formatDate(rec.createdAt),
@@ -92,7 +93,7 @@ async function downloadOwnArchive(recordings: Recording[], displayName?: string 
           intensity: rec.intensity,
           gender: rec.gender,
           age: rec.age,
-          region: rec.region,
+          region: formatRegion(rec.region),
           personality: rec.personality,
           duration: getDurationSeconds(rec),
           createdAt: formatDate(rec.createdAt),
@@ -196,7 +197,7 @@ export default function RecordingsPage() {
                       <Badge variant="secondary">{recording.emotion || 'emotion yo\'q'}</Badge>
                       <Badge variant="outline">{recording.intensity || 'normal'}</Badge>
                       <Badge variant="outline">{recording.gender || 'gender yo\'q'}</Badge>
-                      <Badge variant="outline">{recording.region || 'hudud yo\'q'}</Badge>
+                      <Badge variant="outline">{formatRegion(recording.region)}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {formatDate(recording.createdAt)} • {formatDuration(getDurationSeconds(recording))}

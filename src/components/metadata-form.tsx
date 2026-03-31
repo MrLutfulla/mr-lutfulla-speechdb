@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { emotionInstructions, Instruction } from '@/lib/instructions';
+import { useAppLang } from '@/hooks/use-app-lang';
+import { copy } from '@/lib/i18n';
 
 interface MetadataFormProps {
   onMetadataChange: (metadata: Omit<NewRecordingMetadata, 'textId'>, isValid: boolean) => void;
@@ -42,11 +44,13 @@ function InstructionDisplay({ instruction }: { instruction: Instruction }) {
 }
 
 export function MetadataForm({ onMetadataChange, textId, forcedEmotion = null }: MetadataFormProps) {
+  const { lang } = useAppLang();
   const [emotion, setEmotion] = useState<string | null>(null);
   const [intensity, setIntensity] = useState<string | null>(null);
   const [gender, setGender] = useState<string | null>(null);
   const [age, setAge] = useState<string>('');
-  const [region, setRegion] = useState<string | null>(null);
+  const [regionLevel1, setRegionLevel1] = useState<string>('');
+  const [regionLevel2, setRegionLevel2] = useState<string>('');
   const [personality, setPersonality] = useState<PersonalityTraits>({} as PersonalityTraits);
 
   useEffect(() => {
@@ -54,7 +58,8 @@ export function MetadataForm({ onMetadataChange, textId, forcedEmotion = null }:
     setIntensity(null);
     setGender(null);
     setAge('');
-    setRegion(null);
+    setRegionLevel1('');
+    setRegionLevel2('');
     setPersonality({ extrovert: false, introvert: false, optimistic: false, emotional: false, calm: false, analytical: false, leader: false, compassionate: false });
   }, [textId, forcedEmotion]);
 
@@ -65,19 +70,19 @@ export function MetadataForm({ onMetadataChange, textId, forcedEmotion = null }:
       !!intensity &&
       !!gender &&
       age.trim() !== '' && !isNaN(ageAsNumber) && ageAsNumber > 0 &&
-      !!region &&
+      !!regionLevel1 &&
       Object.values(personality).some(value => value)
     );
-  }, [emotion, intensity, gender, age, region, personality]);
+  }, [emotion, intensity, gender, age, regionLevel1, personality]);
 
   const metadata: Omit<NewRecordingMetadata, 'textId'> = useMemo(() => ({
     emotion,
     intensity,
     gender,
     age: age.trim(),
-    region,
+    region: { level1: regionLevel1, level2: regionLevel2 || null },
     personality,
-  }), [emotion, intensity, gender, age, region, personality]);
+  }), [emotion, intensity, gender, age, regionLevel1, regionLevel2, personality]);
 
   useEffect(() => {
     onMetadataChange(metadata, isFormValid);
@@ -85,7 +90,7 @@ export function MetadataForm({ onMetadataChange, textId, forcedEmotion = null }:
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-foreground mb-1">Label Ma'lumotlari</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-1">{copy[lang].metadataTitle}</h2>
       <p className="text-sm text-muted-foreground mb-4">📌 Iltimos, quyidagi gapni ko‘rsatilgan emotsiyada o‘qing. Bu aktyorlik tarzida bajariladi, real holatingiz shart emas.</p>
 
       <div className="space-y-2">
@@ -136,13 +141,23 @@ export function MetadataForm({ onMetadataChange, textId, forcedEmotion = null }:
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="region">Hudud:</Label>
-        <Select value={region || ''} onValueChange={setRegion}>
+        <Label htmlFor="region">{copy[lang].regionLevel1}:</Label>
+        <Select value={regionLevel1 || ''} onValueChange={setRegionLevel1}>
             <SelectTrigger id="region"><SelectValue placeholder="Hududni tanlang..." /></SelectTrigger>
             <SelectContent>
                 {regions.map(r => <SelectItem key={r} value={r.toLowerCase().replace(/['ʻ]/g, "")}>{r}</SelectItem>)}
             </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="region-level2">{copy[lang].regionLevel2}:</Label>
+        <Input
+            id="region-level2"
+            value={regionLevel2}
+            onChange={(e) => setRegionLevel2(e.target.value)}
+            placeholder="Masalan: Chilonzor"
+        />
       </div>
 
       <div className="space-y-3">

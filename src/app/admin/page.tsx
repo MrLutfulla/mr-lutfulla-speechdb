@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { sentences, emotions, intensities, regions } from '@/lib/sentences';
+import { normalizeRegion, formatRegion } from '@/lib/region';
 
 interface Recording extends NewRecordingMetadata {
   id: string;
@@ -176,20 +177,21 @@ export default function AdminPage() {
               </div>
               <AccordionContent>
                 <Table>
-                  <TableHeader><TableRow><TableHead>Emotion</TableHead><TableHead>Text ID</TableHead><TableHead>Gender</TableHead><TableHead>Duration (s)</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Emotion</TableHead><TableHead>Text ID</TableHead><TableHead>Gender</TableHead><TableHead>Region</TableHead><TableHead>Duration (s)</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {user.recordings?.length > 0 ? user.recordings.map((rec) => (
                       <TableRow key={rec.id}>
                         <TableCell>{rec.emotion}</TableCell>
                         <TableCell className="font-mono text-xs">{rec.textId}</TableCell>
                         <TableCell>{rec.gender}</TableCell>
+                        <TableCell>{formatRegion(rec.region)}</TableCell>
                         <TableCell>{formatDuration(rec.duration)}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => handleEditClick(rec, user.uid)}><Edit className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => downloadAudio(rec.audioBase64, `${rec.speakerId}_${rec.id}`)}><Download className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
-                    )) : <TableRow><TableCell colSpan={5} className="text-center">Yozuvlar topilmadi.</TableCell></TableRow>}
+                    )) : <TableRow><TableCell colSpan={6} className="text-center">Yozuvlar topilmadi.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </AccordionContent>
@@ -233,10 +235,19 @@ export default function AdminPage() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="region" className="text-right">Region</Label>
-                <Select value={editingRecording.region} onValueChange={(value) => setEditingRecording(prev => prev ? {...prev, region: value} : null)}>
+                <Select value={normalizeRegion(editingRecording.region).level1} onValueChange={(value) => setEditingRecording(prev => prev ? {...prev, region: { ...normalizeRegion(prev.region), level1: value }} : null)}>
                     <SelectTrigger className="col-span-3"><SelectValue placeholder="Hududni tanlang" /></SelectTrigger>
                     <SelectContent>{regions.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
                 </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="region-level2" className="text-right">Region L2</Label>
+                <Input
+                  id="region-level2"
+                  value={normalizeRegion(editingRecording.region).level2 || ''}
+                  onChange={(e) => setEditingRecording(prev => prev ? {...prev, region: { ...normalizeRegion(prev.region), level2: e.target.value }} : null)}
+                  className="col-span-3"
+                />
               </div>
             </div>
             <DialogFooter>
