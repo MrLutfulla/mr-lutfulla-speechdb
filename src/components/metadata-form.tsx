@@ -10,7 +10,8 @@ import { emotionInstructions, Instruction } from '@/lib/instructions';
 
 interface MetadataFormProps {
   onMetadataChange: (metadata: Omit<NewRecordingMetadata, 'textId'>, isValid: boolean) => void;
-  textId: string; 
+  textId: string;
+  forcedEmotion?: string | null;
 }
 
 // Yo'riqnomadan kalitlarni olib, emotsiyalar ro'yxatini yaratish
@@ -40,7 +41,7 @@ function InstructionDisplay({ instruction }: { instruction: Instruction }) {
     )
 }
 
-export function MetadataForm({ onMetadataChange, textId }: MetadataFormProps) {
+export function MetadataForm({ onMetadataChange, textId, forcedEmotion = null }: MetadataFormProps) {
   const [emotion, setEmotion] = useState<string | null>(null);
   const [intensity, setIntensity] = useState<string | null>(null);
   const [gender, setGender] = useState<string | null>(null);
@@ -49,13 +50,13 @@ export function MetadataForm({ onMetadataChange, textId }: MetadataFormProps) {
   const [personality, setPersonality] = useState<PersonalityTraits>({} as PersonalityTraits);
 
   useEffect(() => {
-    setEmotion(null);
+    setEmotion(forcedEmotion || null);
     setIntensity(null);
     setGender(null);
     setAge('');
     setRegion(null);
     setPersonality({ extrovert: false, introvert: false, optimistic: false, emotional: false, calm: false, analytical: false, leader: false, compassionate: false });
-  }, [textId]);
+  }, [textId, forcedEmotion]);
 
   const isFormValid = useMemo(() => {
     const ageAsNumber = Number(age);
@@ -89,10 +90,10 @@ export function MetadataForm({ onMetadataChange, textId }: MetadataFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="emotion">Emosiya:</Label>
-        <Select value={emotion || ''} onValueChange={setEmotion}>
+        <Select value={emotion || ''} onValueChange={setEmotion} disabled={!!forcedEmotion}>
             <SelectTrigger id="emotion"><SelectValue placeholder="Emosiyani tanlang..." /></SelectTrigger>
             <SelectContent>
-                {emotions.map(e => <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>)}
+                {(forcedEmotion ? emotions.filter(e => e.id === forcedEmotion) : emotions).map(e => <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>)}
             </SelectContent>
         </Select>
         {emotion && emotionInstructions[emotion] && (

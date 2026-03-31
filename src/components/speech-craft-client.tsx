@@ -22,10 +22,11 @@ async function blobToBase64(blob: Blob): Promise<string> {
 
 interface SpeechCraftClientProps {
   textId: string;
-  onRecordingSaved: (textId: string) => void;
+  forcedEmotion: string;
+  onRecordingSaved: (saved: { textId: string; emotion: string }) => void;
 }
 
-export function SpeechCraftClient({ textId, onRecordingSaved }: SpeechCraftClientProps) {
+export function SpeechCraftClient({ textId, forcedEmotion, onRecordingSaved }: SpeechCraftClientProps) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -69,7 +70,7 @@ export function SpeechCraftClient({ textId, onRecordingSaved }: SpeechCraftClien
       }
 
       const userRef = doc(firestore, 'users', user.uid);
-      const fullMetadata: NewRecordingMetadata = { ...metadata, textId };
+      const fullMetadata: NewRecordingMetadata = { ...metadata, textId, emotion: forcedEmotion };
 
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -100,7 +101,7 @@ export function SpeechCraftClient({ textId, onRecordingSaved }: SpeechCraftClien
       });
 
       toast({ title: "Muvaffaqiyatli Saqlandi!", description: "Yangi yozuvingiz tizimga qo'shildi." });
-      onRecordingSaved(textId);
+      onRecordingSaved({ textId, emotion: forcedEmotion });
 
       setAudioBlob(null);
 
@@ -130,7 +131,7 @@ export function SpeechCraftClient({ textId, onRecordingSaved }: SpeechCraftClien
 
         <div className="lg:col-span-2">
           <div className="bg-card p-6 rounded-lg shadow-sm border">
-            <MetadataForm onMetadataChange={handleMetadataChange} textId={textId} />
+            <MetadataForm onMetadataChange={handleMetadataChange} textId={textId} forcedEmotion={forcedEmotion} />
           </div>
            <Button 
             size="lg" 
