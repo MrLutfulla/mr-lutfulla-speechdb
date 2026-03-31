@@ -2,30 +2,85 @@
 
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { SpeechCraftClient } from '@/components/speech-craft-client';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { doc, setDoc, onSnapshot, collection, getDocs, query } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
-import { sentences } from '@/lib/sentences';
+import { sentences, emotions } from '@/lib/sentences';
+import { emotionInstructions } from '@/lib/instructions';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { buildPendingTasks, buildSentenceOptions } from '@/lib/recording-task-utils';
+import { copy } from '@/lib/i18n';
+import { useAppLang } from '@/hooks/use-app-lang';
 
-function PromptDisplay({ text, onNextClick, allCompleted }: { text: string; onNextClick: () => void; allCompleted: boolean; }) {
+type RecordingTask = {
+  textId: string;
+  text: string;
+  emotion: string;
+};
+
+function PromptDisplay({
+  task,
+  onNextClick,
+  allCompleted,
+  sentenceOptions,
+  onSentenceChange,
+  lang,
+}: {
+  task: RecordingTask | null;
+  onNextClick: () => void;
+  allCompleted: boolean;
+  sentenceOptions: Array<{ textId: string; label: string; remaining: number }>;
+  onSentenceChange: (textId: string) => void;
+  lang: 'uz' | 'ru' | 'en';
+}) {
+  const instruction = task ? emotionInstructions[task.emotion] : null;
+
   return (
     <div className="bg-card border-b py-4">
-      <div className="container mx-auto flex items-center justify-center min-h-[60px]">
+      <div className="container mx-auto flex flex-col gap-3">
         {allCompleted ? (
-          <p className="text-center text-lg text-green-600 font-semibold">Barcha matnlar yozib olindi. E'tiboringiz uchun rahmat!</p>
+          <p className="text-center text-lg text-green-600 font-semibold">Barcha gaplar 8 xil emotsiyada yozib olindi. Rahmat!</p>
         ) : (
           <>
-            <p className="text-center text-lg text-foreground">
-                <span className="font-semibold mr-2">Matn:</span>
-                <span className="text-muted-foreground">{text}</span>
-            </p>
-            <Button variant="ghost" size="icon" onClick={onNextClick} className="ml-4">
-                <RefreshCw className="h-4 w-4" />
-            </Button>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-lg text-foreground">
+                  <span className="font-semibold mr-2">{copy[lang].text}:</span>
+                  <span className="text-muted-foreground">{task?.text}</span>
+                </p>
+                <p className="text-sm mt-1">
+                  <span className="font-semibold mr-2">{copy[lang].emotion}:</span>
+                  <span className="text-primary font-medium uppercase">{task?.emotion}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select onValueChange={onSentenceChange}>
+                  <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder={copy[lang].chooseSentence} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sentenceOptions.map((option) => (
+                      <SelectItem key={option.textId} value={option.textId}>
+                        {option.label} ({option.remaining} qoldi)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="icon" onClick={onNextClick}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            {instruction && (
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                <p className="font-semibold">{instruction.title}</p>
+                <p className="mt-1">{instruction.description}</p>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -33,21 +88,15 @@ function PromptDisplay({ text, onNextClick, allCompleted }: { text: string; onNe
   );
 }
 
-function Footer({ recordingCount, totalDuration }: { recordingCount: number, totalDuration: number }) {
-    const formatDuration = (seconds: number) => {
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.round(seconds % 60);
-        return `${minutes}m ${remainingSeconds}s`;
-    };
-
-    return (
-        <footer className="bg-card border-t py-3">
-            <div className="container mx-auto flex justify-between items-center text-sm text-muted-foreground">
-                <p>Yozmalar: {recordingCount} ta</p>
-                <p>Umumiy vaqt: {formatDuration(totalDuration)}</p>
-            </div>
-        </footer>
-    )
+function Footer({ completedTasks, totalTasks, lang }: { completedTasks: number; totalTasks: number; lang: 'uz' | 'ru' | 'en' }) {
+  return (
+    <footer className="bg-card border-t py-3">
+      <div className="container mx-auto flex justify-between items-center text-sm text-muted-foreground">
+        <p>{copy[lang].progress}: {completedTasks}/{totalTasks}</p>
+        <p>{copy[lang].emotionsPerSentence}: {emotions.length}</p>
+      </div>
+    </footer>
+  );
 }
 
 export default function Home() {
@@ -55,39 +104,64 @@ export default function Home() {
   const router = useRouter();
   const firestore = useFirestore();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [availableSentences, setAvailableSentences] = useState(sentences);
-  const [currentSentence, setCurrentSentence] = useState<{ id: string; text: string; } | null>(null);
+  const { lang } = useAppLang();
+  const [availableTasks, setAvailableTasks] = useState<RecordingTask[]>([]);
+  const [currentTask, setCurrentTask] = useState<RecordingTask | null>(null);
   const [allCompleted, setAllCompleted] = useState(false);
 
-  // O'qilgan matnlarni olib, faqat o'qilmaganlarini ajratib oladi
+  const totalTaskCount = sentences.length * emotions.length;
+  const completedTaskCount = totalTaskCount - availableTasks.length;
+
+  const sentenceOptions = useMemo(() => buildSentenceOptions(sentences, availableTasks), [availableTasks]);
+
   useEffect(() => {
     if (user && firestore) {
-        const recordingsRef = collection(firestore, 'users', user.uid, 'recordings');
-        const q = query(recordingsRef);
-        getDocs(q).then(snapshot => {
-            const recordedTextIds = new Set(snapshot.docs.map(doc => doc.data().textId));
-            const unrecorded = sentences.filter(sentence => !recordedTextIds.has(sentence.id));
-            setAvailableSentences(unrecorded);
-            
-            if (unrecorded.length > 0) {
-                setCurrentSentence(unrecorded[Math.floor(Math.random() * unrecorded.length)]);
-            } else {
-                setAllCompleted(true);
-            }
+      const recordingsRef = collection(firestore, 'users', user.uid, 'recordings');
+      const q = query(recordingsRef);
+      getDocs(q).then((snapshot) => {
+        const existing = snapshot.docs.map((record) => {
+          const data = record.data();
+          return { textId: data.textId as string | undefined, emotion: data.emotion as string | undefined };
         });
+
+        const pendingTasks = buildPendingTasks(sentences, emotions, existing) as RecordingTask[];
+
+        setAvailableTasks(pendingTasks);
+        if (pendingTasks.length > 0) {
+          setCurrentTask(pendingTasks[Math.floor(Math.random() * pendingTasks.length)]);
+          setAllCompleted(false);
+        } else {
+          setAllCompleted(true);
+          setCurrentTask(null);
+        }
+      });
     }
   }, [user, firestore]);
 
-  // Matnni yangilash funksiyasi
-  const getNextSentence = useCallback(() => {
-    if (availableSentences.length > 0) {
-        const randomIndex = Math.floor(Math.random() * availableSentences.length);
-        setCurrentSentence(availableSentences[randomIndex]);
-    } else {
+  const getNextTask = useCallback(() => {
+    setCurrentTask((prev) => {
+      if (availableTasks.length === 0) {
         setAllCompleted(true);
-    }
-  }, [availableSentences]);
+        return null;
+      }
 
+      const choices = prev
+        ? availableTasks.filter((task) => !(task.textId === prev.textId && task.emotion === prev.emotion))
+        : availableTasks;
+
+      const source = choices.length > 0 ? choices : availableTasks;
+      return source[Math.floor(Math.random() * source.length)];
+    });
+  }, [availableTasks]);
+
+  const handleSentenceChange = useCallback(
+    (textId: string) => {
+      const tasksForSentence = availableTasks.filter((task) => task.textId === textId);
+      if (tasksForSentence.length === 0) return;
+      setCurrentTask(tasksForSentence[0]);
+    },
+    [availableTasks]
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -117,18 +191,19 @@ export default function Home() {
     }
   }, [user, loading, router, firestore]);
 
-  // Ovoz saqlangandan so'ng chaqiriladi
-  const handleRecordingSaved = (savedTextId: string) => {
-    const updatedAvailable = availableSentences.filter(s => s.id !== savedTextId);
-    setAvailableSentences(updatedAvailable);
+  const handleRecordingSaved = ({ textId, emotion }: { textId: string; emotion: string }) => {
+    const updatedAvailable = availableTasks.filter((task) => !(task.textId === textId && task.emotion === emotion));
+    setAvailableTasks(updatedAvailable);
+
     if (updatedAvailable.length > 0) {
-        setCurrentSentence(updatedAvailable[Math.floor(Math.random() * updatedAvailable.length)]);
+      setCurrentTask(updatedAvailable[Math.floor(Math.random() * updatedAvailable.length)]);
     } else {
-        setAllCompleted(true);
+      setAllCompleted(true);
+      setCurrentTask(null);
     }
   };
 
-  if (loading || !user || !userProfile || (!currentSentence && !allCompleted)) {
+  if (loading || !user || !userProfile || (!currentTask && !allCompleted)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -139,24 +214,25 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
-      <PromptDisplay 
-        text={currentSentence?.text || ''} 
-        onNextClick={getNextSentence} 
+      <PromptDisplay
+        task={currentTask}
+        onNextClick={getNextTask}
         allCompleted={allCompleted}
+        sentenceOptions={sentenceOptions}
+        onSentenceChange={handleSentenceChange}
+        lang={lang}
       />
       <main className="flex-1 overflow-auto bg-background/90">
-        {!allCompleted && currentSentence && (
-            <SpeechCraftClient 
-                key={currentSentence.id} // Re-mount component on sentence change
-                textId={currentSentence.id} 
-                onRecordingSaved={handleRecordingSaved} 
-            />
+        {!allCompleted && currentTask && (
+          <SpeechCraftClient
+            key={`${currentTask.textId}-${currentTask.emotion}`}
+            textId={currentTask.textId}
+            forcedEmotion={currentTask.emotion}
+            onRecordingSaved={handleRecordingSaved}
+          />
         )}
       </main>
-      <Footer 
-        recordingCount={userProfile.recordingCount || 0} 
-        totalDuration={userProfile.totalDuration || 0} 
-      />
+      <Footer completedTasks={completedTaskCount} totalTasks={totalTaskCount} lang={lang} />
     </div>
   );
 }

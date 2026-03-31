@@ -8,6 +8,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { isAdmin } from '@/lib/admins';
 import { useMemo } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { copy, LANG_OPTIONS } from '@/lib/i18n';
+import { useAppLang } from '@/hooks/use-app-lang';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -25,6 +28,7 @@ export function Header() {
   const pathname = usePathname();
 
   const userIsAdmin = useMemo(() => (user ? isAdmin(user.uid) : false), [user]);
+  const { lang, setLang } = useAppLang();
 
   const handleLogout = async () => {
     if (auth) {
@@ -34,9 +38,10 @@ export function Header() {
   };
 
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/help', label: 'Help' },
+    { href: '/', label: copy[lang].home },
+    { href: '/recordings', label: copy[lang].recordings },
+    { href: '/dashboard', label: copy[lang].dashboard },
+    { href: '/help', label: copy[lang].help },
   ];
 
   return (
@@ -59,6 +64,18 @@ export function Header() {
         </nav>
       </div>
       
+      <div className="flex items-center gap-4">
+        <Select value={lang} onValueChange={(value) => setLang(value as any)}>
+          <SelectTrigger className="w-[130px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LANG_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
       {user && (
         <div className="flex items-center gap-4">
           <DropdownMenu>
@@ -93,6 +110,7 @@ export function Header() {
           </DropdownMenu>
         </div>
       )}
+      </div>
     </header>
   );
 }
