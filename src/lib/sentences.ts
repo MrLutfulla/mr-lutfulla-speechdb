@@ -62,13 +62,14 @@ export const sentences = [
 ];
 
 export const emotions = [
-    { id: "happy", name: "Xursand" },
-    { id: "sad", name: "Xafa" },
-    { id: "angry", name: "Jahldor" },
     { id: "neutral", name: "Neytral" },
-    { id: "fear", name: "Qo'rquv" },
+    { id: "calm", name: "Xotirjam" },
+    { id: "happy", name: "Xursand" },
+    { id: "sad", name: "G'amgin" },
+    { id: "angry", name: "G'azab" },
+    { id: "fearful", name: "Qo'rquv" },
     { id: "disgust", name: "Jirkanish" },
-    { id: "surprise", name: "Hayrat" },
+    { id: "surprised", name: "Hayrat" },
 ];
 
 export const intensities = [
