@@ -12,19 +12,13 @@ import { sentences, emotions } from '@/lib/sentences';
 import { emotionInstructions } from '@/lib/instructions';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { buildPendingTasks, buildSentenceOptions } from '@/lib/recording-task-utils';
 
 type RecordingTask = {
   textId: string;
   text: string;
   emotion: string;
 };
-
-function normalizeEmotion(emotion: string | undefined) {
-  if (!emotion) return '';
-  if (emotion === 'fear') return 'fearful';
-  if (emotion === 'surprise') return 'surprised';
-  return emotion;
-}
 
 function PromptDisplay({
   task,
@@ -113,38 +107,19 @@ export default function Home() {
   const totalTaskCount = sentences.length * emotions.length;
   const completedTaskCount = totalTaskCount - availableTasks.length;
 
-  const sentenceOptions = useMemo(() => {
-    const counter = new Map<string, number>();
-    availableTasks.forEach((task) => {
-      counter.set(task.textId, (counter.get(task.textId) || 0) + 1);
-    });
-
-    return sentences
-      .map((sentence) => ({ textId: sentence.id, label: sentence.text, remaining: counter.get(sentence.id) || 0 }))
-      .filter((item) => item.remaining > 0);
-  }, [availableTasks]);
+  const sentenceOptions = useMemo(() => buildSentenceOptions(sentences, availableTasks), [availableTasks]);
 
   useEffect(() => {
     if (user && firestore) {
       const recordingsRef = collection(firestore, 'users', user.uid, 'recordings');
       const q = query(recordingsRef);
       getDocs(q).then((snapshot) => {
-        const recordedPairs = new Set(
-          snapshot.docs.map((record) => {
-            const data = record.data();
-            return `${data.textId}::${normalizeEmotion(data.emotion)}`;
-          })
-        );
-
-        const pendingTasks: RecordingTask[] = [];
-        sentences.forEach((sentence) => {
-          emotions.forEach((emotion) => {
-            const key = `${sentence.id}::${emotion.id}`;
-            if (!recordedPairs.has(key)) {
-              pendingTasks.push({ textId: sentence.id, text: sentence.text, emotion: emotion.id });
-            }
-          });
+        const existing = snapshot.docs.map((record) => {
+          const data = record.data();
+          return { textId: data.textId as string | undefined, emotion: data.emotion as string | undefined };
         });
+
+        const pendingTasks = buildPendingTasks(sentences, emotions, existing) as RecordingTask[];
 
         setAvailableTasks(pendingTasks);
         if (pendingTasks.length > 0) {

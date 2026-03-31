@@ -13,6 +13,7 @@ import { Waves, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { UserProfile } from '@/lib/types';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function SignupPage() {
   const auth = useAuth();
@@ -24,6 +25,7 @@ export default function SignupPage() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   useEffect(() => {
     if (!userLoading && user) {
@@ -44,6 +46,12 @@ export default function SignupPage() {
         return;
     }
 
+    if (!consentAccepted) {
+        setError("Davom etish uchun tadqiqot roziligini qabul qilishingiz shart.");
+        setIsSigningUp(false);
+        return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
@@ -59,6 +67,8 @@ export default function SignupPage() {
         displayName: displayName,
         photoURL: newUser.photoURL,
         recordingCount: 0,
+        consentAcceptedAt: new Date().toISOString(),
+        consentVersion: 'v1',
       };
       await setDoc(userRef, userData, { merge: true });
 
@@ -141,7 +151,22 @@ export default function SignupPage() {
                 disabled={isSigningUp}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isSigningUp}>
+
+            <div className="rounded-md border p-3 bg-muted/20">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="consent"
+                  checked={consentAccepted}
+                  onCheckedChange={(checked) => setConsentAccepted(!!checked)}
+                  disabled={isSigningUp}
+                />
+                <Label htmlFor="consent" className="text-sm leading-5 font-normal">
+                  Men anonimlashtirilgan ovoz va metadata ma'lumotlarim tadqiqot maqsadida ishlatilishiga roziman.
+                </Label>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isSigningUp || !consentAccepted}>
               {isSigningUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Hisob yaratish"}
             </Button>
           </CardContent>

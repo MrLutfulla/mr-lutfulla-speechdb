@@ -61,4 +61,6 @@ export interface UserProfile {
   photoURL: string | null;
   recordingCount?: number;
   totalDuration?: number;
+  consentAcceptedAt?: string;
+  consentVersion?: string;
 }
